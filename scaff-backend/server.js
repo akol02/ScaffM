@@ -17,9 +17,19 @@ app.use(cors()); // Allow Frontend to hit API
 // To this (More relaxed for development/API use):
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Disables the strict CSP that blocks 'eval'
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
   })
 );
+
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+  );
+  next();
+});
+
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
