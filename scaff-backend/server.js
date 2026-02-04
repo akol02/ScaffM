@@ -2,6 +2,8 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const helmet = require('helmet');
+
 
 dotenv.config();
 connectDB();
@@ -11,6 +13,13 @@ const app = express();
 // Middleware
 app.use(express.json()); // Parse JSON body
 app.use(cors()); // Allow Frontend to hit API
+
+// To this (More relaxed for development/API use):
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Disables the strict CSP that blocks 'eval'
+  })
+);
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
