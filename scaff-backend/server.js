@@ -43,6 +43,10 @@ app.use('/api/sales', require('./routes/salesRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/store', require('./routes/storeRoutes'));
 
+app.get("/", (req, res) => {
+  res.json({ status: "SCAFF API is running", version: "1.0.0" });
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
