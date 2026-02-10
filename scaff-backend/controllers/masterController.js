@@ -8,6 +8,7 @@ const Currency = require('../models/Currency');
 const FiscalYear = require('../models/FiscalYear');
 const TaxCode = require('../models/TaxCode');
 const State = require('../models/State');
+const Supplier = require('../models/Supplier');
 
 // ==========================================
 // 🛠️ HELPER FUNCTIONS
@@ -354,4 +355,38 @@ exports.syncStates = async (req, res) => {
         await State.bulkWrite(operations);
         res.json({ message: "States Synced Successfully" });
     } catch (err) { res.status(500).json({ message: err.message }); }
+};
+
+
+// --- SUPPLIERS ---
+exports.getSuppliers = async (req, res) => {
+    try {
+        // ✅ Populate currency to get the object instead of just the ID string
+        const data = await Supplier.find()
+            .populate('currency', 'code symbol')
+            .sort({ createdAt: -1 });
+        res.json(data);
+    } catch (err) { 
+        res.status(500).json({ message: err.message }); 
+    }
+};
+
+exports.createSupplier = async (req, res) => {
+    try {
+        const code = await getNextCode(Supplier, 'SUP');
+        const supplier = await Supplier.create({ ...req.body, code });
+        res.status(201).json(supplier);
+    } catch (err) { 
+        res.status(400).json({ message: err.message }); 
+    }
+};
+
+exports.updateSupplier = async (req, res) => {
+    try {
+        const updated = await Supplier.findByIdAndUpdate(req.params.id, req.body, { new: true })
+            .populate('currency', 'code symbol');
+        res.json(updated);
+    } catch (err) { 
+        res.status(400).json({ message: err.message }); 
+    }
 };

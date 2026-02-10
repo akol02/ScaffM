@@ -1,16 +1,16 @@
-import { jsx, jsxs } from "react/jsx-runtime";
+import { jsx, jsxs, Fragment } from "react/jsx-runtime";
 import { PassThrough } from "node:stream";
 import { createReadableStreamFromReadable } from "@react-router/node";
-import { ServerRouter, UNSAFE_withComponentProps, Outlet, UNSAFE_withErrorBoundaryProps, isRouteErrorResponse, Meta, Links, ScrollRestoration, Scripts, useNavigate, useLocation, NavLink, Link as Link$1 } from "react-router";
+import { ServerRouter, UNSAFE_withComponentProps, Outlet, UNSAFE_withErrorBoundaryProps, isRouteErrorResponse, Meta, Links, ScrollRestoration, Scripts, NavLink, useNavigate, useLocation, Link as Link$1 } from "react-router";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 import * as React from "react";
-import { useState, useEffect, useCallback } from "react";
-import { Loader2Icon, OctagonXIcon, TriangleAlertIcon, InfoIcon, CircleCheckIcon, XIcon, ChevronRight, Menu, LayoutDashboard, Users, Store, HardHat, MapPin, Layers, Package, Warehouse, Percent, Globe, Database, ClipboardList, ShoppingCart, FileText, Undo2, AlertTriangle, Scale, Truck, Building2, CalendarRange, Landmark, Settings, User, UserCog, LogOut, ChevronDown, Wallet, Box, Activity, ArrowUpRight, ArrowDownRight, ChevronDownIcon, CheckIcon, ChevronUpIcon, Plus, CreditCard, Pencil, Phone, Trash2, Mail, Search, Save, ArrowUpCircle, ArrowDownCircle, Clock, ChevronLeft, CalendarIcon, CheckCircle2, ShoppingBag, Calculator, Loader2, CloudDownload, Link, ArrowRightLeft, Copy } from "lucide-react";
+import { createContext, useState, useEffect, useContext, memo, useCallback, useMemo } from "react";
+import { Loader2Icon, OctagonXIcon, TriangleAlertIcon, InfoIcon, CircleCheckIcon, XIcon, ChevronRight, LayoutDashboard, Users, Store, HardHat, MapPin, Layers, Package, Warehouse, Percent, Globe, Database, ClipboardList, ShoppingCart, FileText, Undo2, AlertTriangle, Scale, Truck, ShoppingBag, Building2, CalendarRange, Landmark, Settings, User, UserCog, Menu, AlignLeft, LogOut, Wallet, Box, Activity, ArrowUpRight, ArrowDownRight, ChevronDownIcon, CheckIcon, ChevronUpIcon, Plus, CreditCard, Pencil, Phone, Trash2, Search, RefreshCcw, Eye, CloudDownload, Mail, X, ChevronLeft, Save, ArrowUpCircle, CalendarIcon, CheckCircle2, Loader2, Link, ArrowRightLeft, BarChart3, ShieldCheck, Copy, ArrowRight } from "lucide-react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { useTheme } from "next-themes";
+import { useTheme as useTheme$1 } from "next-themes";
 import { Toaster as Toaster$1, toast } from "sonner";
 import { Slot } from "@radix-ui/react-slot";
 import { cva } from "class-variance-authority";
@@ -28,8 +28,10 @@ import * as LabelPrimitive from "@radix-ui/react-label";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { format } from "date-fns";
+import * as SeparatorPrimitive from "@radix-ui/react-separator";
 import { DayPicker } from "react-day-picker";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { StyleSheet, Document, Page, View, Text, PDFViewer } from "@react-pdf/renderer";
 const streamTimeout = 5e3;
 function handleRequest(request, responseStatusCode, responseHeaders, routerContext, loadContext) {
   if (request.method.toUpperCase() === "HEAD") {
@@ -192,7 +194,7 @@ function AvatarFallback({
   );
 }
 const Toaster = ({ ...props }) => {
-  const { theme = "system" } = useTheme();
+  const { theme = "system" } = useTheme$1();
   return /* @__PURE__ */ jsx(
     Toaster$1,
     {
@@ -335,19 +337,6 @@ function SheetTitle({
     }
   );
 }
-function SheetDescription({
-  className,
-  ...props
-}) {
-  return /* @__PURE__ */ jsx(
-    SheetPrimitive.Description,
-    {
-      "data-slot": "sheet-description",
-      className: cn("text-muted-foreground text-sm", className),
-      ...props
-    }
-  );
-}
 const Collapsible = CollapsiblePrimitive.Root;
 const CollapsibleTrigger = CollapsiblePrimitive.CollapsibleTrigger;
 const CollapsibleContent = CollapsiblePrimitive.CollapsibleContent;
@@ -475,15 +464,93 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => /* @__PURE__ *
   }
 ));
 Switch.displayName = SwitchPrimitives.Root.displayName;
+const initialState = {
+  theme: "system",
+  setTheme: () => null
+};
+const ThemeProviderContext = createContext(initialState);
+function ThemeProvider({
+  children,
+  defaultTheme = "system",
+  storageKey = "vite-ui-theme",
+  ...props
+}) {
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(storageKey) || defaultTheme;
+    }
+    return defaultTheme;
+  });
+  useEffect(() => {
+    const root2 = window.document.documentElement;
+    root2.classList.remove("light", "dark");
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      root2.classList.add(systemTheme);
+      return;
+    }
+    root2.classList.add(theme);
+  }, [theme]);
+  const value = {
+    theme,
+    setTheme: (theme2) => {
+      localStorage.setItem(storageKey, theme2);
+      setTheme(theme2);
+    }
+  };
+  return /* @__PURE__ */ jsx(ThemeProviderContext.Provider, { value, ...props, children });
+}
+const useTheme = () => {
+  const context = useContext(ThemeProviderContext);
+  if (context === void 0) throw new Error("useTheme must be used within a ThemeProvider");
+  return context;
+};
+const ThemeColorProviderContext = createContext({
+  color: "orange",
+  setColor: () => null
+});
+function ThemeColorProvider({
+  children,
+  defaultColor = "orange",
+  storageKey = "scaff-ui-color"
+}) {
+  const [color, setColor] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(storageKey) || defaultColor;
+    }
+    return defaultColor;
+  });
+  useEffect(() => {
+    const body = document.body;
+    body.classList.remove("theme-orange", "theme-blue", "theme-green", "theme-violet", "theme-red");
+    body.classList.add(`theme-${color}`);
+  }, [color]);
+  const value = {
+    color,
+    setColor: (color2) => {
+      localStorage.setItem(storageKey, color2);
+      setColor(color2);
+    }
+  };
+  return /* @__PURE__ */ jsx(ThemeColorProviderContext.Provider, { value, children });
+}
+function ClientOnly({ children }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  if (!mounted) return null;
+  return /* @__PURE__ */ jsx(Fragment, { children });
+}
 const menuGroups = [{
-  label: "Overview",
+  label: "OVERVIEW",
   items: [{
     label: "Dashboard",
     icon: LayoutDashboard,
     path: "/"
   }]
 }, {
-  label: "Masters",
+  label: "MASTERS",
   icon: Database,
   items: [{
     label: "Customers",
@@ -523,26 +590,31 @@ const menuGroups = [{
     path: "/states"
   }]
 }, {
-  label: "Inventory",
+  label: "INVENTORY",
   icon: ClipboardList,
-  items: [
-    {
-      label: "Operations (In/Out)",
-      icon: Package,
-      path: "/inventory"
-    }
-    // { label: "Challans (Delivery)", icon: FileText, path: "/challans" },
-  ]
+  items: [{
+    label: "Operations (In/Out)",
+    icon: Package,
+    path: "/inventory"
+  }]
 }, {
-  label: "Sales",
+  label: "SALES",
   icon: ShoppingCart,
   items: [{
     label: "Sales Orders",
     icon: ShoppingCart,
     path: "/sales"
+  }, {
+    label: "Sales Invoice",
+    icon: FileText,
+    path: "/sales-invoice"
+  }, {
+    label: "Sale Return",
+    icon: Undo2,
+    path: "/sale-return"
   }]
 }, {
-  label: "Store",
+  label: "STORE",
   icon: Truck,
   items: [{
     label: "Delivery Challan",
@@ -562,7 +634,19 @@ const menuGroups = [{
     path: "/adjustments"
   }]
 }, {
-  label: "Administration",
+  label: "PURCHASE",
+  icon: ShoppingBag,
+  items: [{
+    label: "Suppliers",
+    icon: Users,
+    path: "/suppliers"
+  }, {
+    label: "Purchase Order",
+    icon: FileText,
+    path: "/purchase-order"
+  }]
+}, {
+  label: "ADMINISTRATION",
   icon: UserCog,
   items: [{
     label: "Company Profile",
@@ -590,185 +674,176 @@ const menuGroups = [{
     path: "/profile"
   }]
 }];
-const dashboardLayout = UNSAFE_withComponentProps(function DashboardLayout() {
+const SidebarMenuItem = memo(({
+  item,
+  onClick,
+  isCollapsed,
+  delay
+}) => /* @__PURE__ */ jsxs(NavLink, {
+  to: item.path,
+  onClick,
+  className: ({
+    isActive
+  }) => cn("submenu-item-fade flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 ml-6 mr-2 mb-1", isActive ? "bg-primary/10 text-primary border-r-4 border-primary shadow-sm dark:bg-primary/20" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800"),
+  style: {
+    animationDelay: `${delay}ms`
+  },
+  children: [/* @__PURE__ */ jsx(item.icon, {
+    size: 16
+  }), !isCollapsed && /* @__PURE__ */ jsx("span", {
+    children: item.label
+  })]
+}));
+const SidebarGroup = memo(({
+  group,
+  onClickMobile,
+  isCollapsed,
+  openGroupName,
+  setOpenGroupName,
+  currentPath
+}) => {
+  const isChildActive = group.items.some((item) => item.path === currentPath);
+  const isOpen = openGroupName === group.label;
+  if (group.label === "OVERVIEW") {
+    const IconComponent = group.items[0].icon;
+    return /* @__PURE__ */ jsxs(NavLink, {
+      to: group.items[0].path,
+      onClick: onClickMobile,
+      className: ({
+        isActive
+      }) => cn("flex items-center gap-3 px-6 py-3 mx-2 rounded-lg text-sm font-bold transition-all duration-300 mb-1", isActive ? "bg-primary text-white shadow-lg" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"),
+      children: [/* @__PURE__ */ jsx(IconComponent, {
+        size: 20
+      }), !isCollapsed && /* @__PURE__ */ jsx("span", {
+        children: group.label
+      })]
+    });
+  }
+  return /* @__PURE__ */ jsxs(Collapsible, {
+    open: isOpen && !isCollapsed,
+    onOpenChange: (open) => setOpenGroupName(open ? group.label : null),
+    className: "mb-1",
+    children: [/* @__PURE__ */ jsxs(CollapsibleTrigger, {
+      className: cn("flex items-center justify-between w-[calc(100%-16px)] mx-2 px-4 py-3 text-sm font-bold rounded-lg transition-all duration-300 group", isChildActive ? "bg-primary/5 text-primary" : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"),
+      children: [/* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3",
+        children: [/* @__PURE__ */ jsx(group.icon, {
+          size: 20,
+          className: cn(isChildActive ? "text-primary" : "text-slate-500")
+        }), !isCollapsed && /* @__PURE__ */ jsx("span", {
+          children: group.label
+        })]
+      }), !isCollapsed && /* @__PURE__ */ jsx(ChevronRight, {
+        size: 16,
+        className: cn("transition-transform duration-300", isOpen && "rotate-90")
+      })]
+    }), /* @__PURE__ */ jsx(CollapsibleContent, {
+      className: "overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up",
+      children: /* @__PURE__ */ jsx("div", {
+        className: "py-1",
+        children: group.items.map((item, index) => /* @__PURE__ */ jsx(SidebarMenuItem, {
+          item,
+          onClick: onClickMobile,
+          isCollapsed,
+          delay: index * 30
+        }, item.path))
+      })
+    })]
+  });
+});
+function DashboardContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const {
+    theme,
+    setTheme
+  } = useTheme();
   const [menuPosition, setMenuPosition] = useState("left");
+  const [openGroupName, setOpenGroupName] = useState(null);
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) navigate("/login");
     const savedPos = localStorage.getItem("menuPosition");
-    if (savedPos === "left" || savedPos === "top") {
-      setMenuPosition(savedPos);
-    }
-  }, [navigate, location]);
-  const toggleMenuPosition = (checked) => {
-    const pos = checked ? "top" : "left";
-    setMenuPosition(pos);
-    localStorage.setItem("menuPosition", pos);
-  };
-  const handleLogout = () => {
+    if (savedPos === "left" || savedPos === "top") setMenuPosition(savedPos);
+  }, [navigate]);
+  useEffect(() => {
+    const activeGroup = menuGroups.find((group) => group.items.some((item) => item.path === location.pathname));
+    if (activeGroup) setOpenGroupName(activeGroup.label);
+  }, [location.pathname]);
+  const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
-  };
-  const SidebarMenuItem = ({
-    item,
-    onClick
-  }) => /* @__PURE__ */ jsxs(NavLink, {
-    to: item.path,
-    onClick,
-    className: ({
-      isActive
-    }) => cn("flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ml-2", isActive ? "bg-orange-50 text-orange-700 border-l-4 border-orange-600 shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-4 border-transparent"),
-    children: [/* @__PURE__ */ jsx(item.icon, {
-      size: 16
-    }), item.label]
-  });
-  const SidebarGroup = ({
-    group,
-    onClickMobile
-  }) => {
-    const isChildActive = group.items.some((item) => item.path === location.pathname);
-    const [isOpen, setIsOpen] = useState(isChildActive);
-    if (!group.icon) {
-      return /* @__PURE__ */ jsxs("div", {
-        className: "mb-4",
+  }, [navigate]);
+  const renderSidebar = (isMobile = false) => /* @__PURE__ */ jsxs("div", {
+    className: "flex flex-col h-full bg-white dark:bg-slate-900 border-r dark:border-slate-800",
+    children: [/* @__PURE__ */ jsx("div", {
+      className: "p-4 flex items-center h-20 border-b dark:border-slate-800 overflow-hidden shrink-0",
+      children: /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full px-2",
         children: [/* @__PURE__ */ jsx("div", {
-          className: "px-4 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider",
-          children: group.label
-        }), /* @__PURE__ */ jsx("div", {
-          className: "space-y-1 px-2",
-          children: group.items.map((item) => /* @__PURE__ */ jsx(SidebarMenuItem, {
-            item,
-            onClick: onClickMobile
-          }, item.path))
-        })]
-      });
-    }
-    return /* @__PURE__ */ jsxs(Collapsible, {
-      open: isOpen,
-      onOpenChange: setIsOpen,
-      className: "mb-2",
-      children: [/* @__PURE__ */ jsxs(CollapsibleTrigger, {
-        className: "flex items-center justify-between w-full px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-orange-600 rounded-md transition-colors group",
-        children: [/* @__PURE__ */ jsxs("div", {
-          className: "flex items-center gap-3",
-          children: [/* @__PURE__ */ jsx(group.icon, {
-            size: 18,
-            className: "text-slate-500 group-hover:text-orange-600"
-          }), group.label]
-        }), isOpen ? /* @__PURE__ */ jsx(ChevronDown, {
-          size: 14
-        }) : /* @__PURE__ */ jsx(ChevronRight, {
-          size: 14
-        })]
-      }), /* @__PURE__ */ jsx(CollapsibleContent, {
-        className: "space-y-1 mt-1 px-2 animate-in slide-in-from-top-2 duration-200",
-        children: group.items.map((item) => /* @__PURE__ */ jsx(SidebarMenuItem, {
-          item,
-          onClick: onClickMobile
-        }, item.path))
-      })]
-    });
-  };
-  const UserDropdown = () => /* @__PURE__ */ jsxs(DropdownMenu, {
-    children: [/* @__PURE__ */ jsx(DropdownMenuTrigger, {
-      asChild: true,
-      children: /* @__PURE__ */ jsxs(Avatar, {
-        className: "cursor-pointer hover:opacity-80 transition-opacity",
-        children: [/* @__PURE__ */ jsx(AvatarImage, {
-          src: "https://github.com/shadcn.png"
-        }), /* @__PURE__ */ jsx(AvatarFallback, {
-          children: "AD"
+          className: "flex-shrink-0 h-10 w-10 bg-primary rounded-xl flex items-center justify-center text-white font-black shadow-lg",
+          children: "S"
+        }), (!isCollapsed || isMobile) && /* @__PURE__ */ jsxs("span", {
+          className: "font-black text-xl tracking-tighter text-slate-900 dark:text-white whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500",
+          children: ["SCAFF", /* @__PURE__ */ jsx("span", {
+            className: "text-primary",
+            children: "RENT"
+          })]
         })]
       })
-    }), /* @__PURE__ */ jsxs(DropdownMenuContent, {
-      align: "end",
-      className: "w-60",
-      children: [/* @__PURE__ */ jsx(DropdownMenuLabel, {
-        children: "My Account"
-      }), /* @__PURE__ */ jsx(DropdownMenuSeparator, {}), /* @__PURE__ */ jsxs("div", {
-        className: "flex items-center justify-between px-2 py-2 select-none",
-        children: [/* @__PURE__ */ jsx("div", {
-          className: "flex flex-col space-y-0.5",
-          children: /* @__PURE__ */ jsx("span", {
-            className: "text-sm font-medium",
-            children: "Switch Layout"
-          })
-        }), /* @__PURE__ */ jsx(Switch, {
-          checked: menuPosition === "top",
-          onCheckedChange: toggleMenuPosition
-        })]
-      }), /* @__PURE__ */ jsx(DropdownMenuSeparator, {}), /* @__PURE__ */ jsxs(DropdownMenuItem, {
+    }), /* @__PURE__ */ jsx("div", {
+      className: "flex-1 overflow-y-auto py-4 space-y-1 no-scrollbar",
+      children: menuGroups.map((group) => /* @__PURE__ */ jsx(SidebarGroup, {
+        group,
+        onClickMobile: isMobile ? () => setIsMobileOpen(false) : void 0,
+        isCollapsed: isCollapsed && !isMobile,
+        openGroupName,
+        setOpenGroupName,
+        currentPath: location.pathname
+      }, group.label))
+    }), (menuPosition === "left" || isMobile) && /* @__PURE__ */ jsx("div", {
+      className: "p-4 border-t dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50",
+      children: /* @__PURE__ */ jsxs("div", {
         onClick: handleLogout,
-        className: "text-red-600 focus:text-red-600 gap-2 cursor-pointer",
+        className: "flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-red-100 hover:text-red-700 rounded-md transition-all",
         children: [/* @__PURE__ */ jsx(LogOut, {
-          size: 16
-        }), " Logout"]
-      })]
+          size: 18
+        }), " ", !isCollapsed && /* @__PURE__ */ jsx("span", {
+          className: "text-sm font-medium",
+          children: "Log Out"
+        })]
+      })
     })]
   });
   const TopNavigation = () => /* @__PURE__ */ jsx("div", {
     className: "flex items-center space-x-2",
     children: /* @__PURE__ */ jsx(Menubar, {
-      className: "border-none shadow-none bg-transparent",
+      className: "border-none shadow-none bg-transparent h-auto",
       children: menuGroups.map((group, idx) => /* @__PURE__ */ jsxs(MenubarMenu, {
         children: [/* @__PURE__ */ jsx(MenubarTrigger, {
-          className: "font-medium text-slate-600 hover:text-orange-600 hover:bg-orange-50 cursor-pointer data-[state=open]:bg-orange-50 data-[state=open]:text-orange-700",
+          className: "font-bold text-slate-600 hover:text-primary hover:bg-primary/5 cursor-pointer data-[state=open]:text-primary uppercase text-[10px] tracking-widest px-4",
           children: group.label
         }), /* @__PURE__ */ jsx(MenubarContent, {
+          className: "dark:bg-slate-900 shadow-xl border-slate-200 dark:border-slate-800",
           children: group.items.map((item) => /* @__PURE__ */ jsxs(MenubarItem, {
             onClick: () => navigate(item.path),
-            className: "gap-2 cursor-pointer",
-            children: [item.icon && /* @__PURE__ */ jsx(item.icon, {
+            className: "gap-2 cursor-pointer py-2",
+            children: [/* @__PURE__ */ jsx(item.icon, {
               size: 14,
-              className: "text-slate-500"
-            }), item.label]
+              className: "text-slate-400"
+            }), " ", item.label]
           }, item.path))
         })]
       }, idx))
     })
   });
-  const renderSidebar = (isMobile = false) => /* @__PURE__ */ jsxs("div", {
-    className: "flex flex-col h-full bg-white text-slate-900 border-r",
-    children: [/* @__PURE__ */ jsxs("div", {
-      className: "p-6 flex items-center gap-2 border-b h-16",
-      children: [/* @__PURE__ */ jsx("div", {
-        className: "h-8 w-8 bg-orange-600 rounded-md flex items-center justify-center text-white font-bold shadow-sm",
-        children: "S"
-      }), /* @__PURE__ */ jsxs("span", {
-        className: "font-bold text-xl tracking-tight text-slate-900",
-        children: ["SCAFF", /* @__PURE__ */ jsx("span", {
-          className: "text-orange-600",
-          children: "RENT"
-        })]
-      })]
-    }), /* @__PURE__ */ jsx("div", {
-      className: "flex-1 overflow-y-auto py-6 space-y-2",
-      children: menuGroups.map((group, idx) => /* @__PURE__ */ jsx(SidebarGroup, {
-        group,
-        onClickMobile: isMobile ? () => setIsMobileOpen(false) : void 0
-      }, idx))
-    }), menuPosition === "left" || isMobile ? /* @__PURE__ */ jsx("div", {
-      className: "p-4 border-t bg-slate-50",
-      children: /* @__PURE__ */ jsxs("div", {
-        onClick: handleLogout,
-        className: "flex items-center gap-3 px-3 py-2 text-slate-500 cursor-pointer hover:bg-red-100 hover:text-red-700 rounded-md transition-colors",
-        children: [/* @__PURE__ */ jsx(LogOut, {
-          size: 18
-        }), " ", /* @__PURE__ */ jsx("span", {
-          className: "text-sm font-medium",
-          children: "Log Out"
-        })]
-      })
-    }) : null]
-  });
   return /* @__PURE__ */ jsxs("div", {
-    className: "flex h-screen bg-slate-50/50",
+    className: "flex h-screen bg-[#F4F7FE] dark:bg-slate-950 transition-colors duration-300 overflow-hidden",
     children: [/* @__PURE__ */ jsxs("div", {
-      className: "md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b z-50 flex items-center px-4 justify-between shadow-sm",
+      className: "md:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-b z-50 flex items-center px-4 justify-between shadow-sm",
       children: [/* @__PURE__ */ jsxs("div", {
         className: "flex items-center gap-2",
         children: [/* @__PURE__ */ jsxs(Sheet, {
@@ -779,84 +854,145 @@ const dashboardLayout = UNSAFE_withComponentProps(function DashboardLayout() {
             children: /* @__PURE__ */ jsx(Button, {
               variant: "ghost",
               size: "icon",
-              className: "md:hidden",
-              children: /* @__PURE__ */ jsx(Menu, {
-                className: "h-6 w-6 text-slate-700"
-              })
+              className: "bg-primary/10 text-primary",
+              children: /* @__PURE__ */ jsx(Menu, {})
             })
           }), /* @__PURE__ */ jsxs(SheetContent, {
             side: "left",
-            className: "p-0 w-64 border-r-0",
+            className: "p-0 w-72 dark:bg-slate-900 border-none",
             children: [/* @__PURE__ */ jsx(SheetTitle, {
               className: "sr-only",
-              children: "Navigation"
-            }), /* @__PURE__ */ jsx(SheetDescription, {
-              className: "sr-only",
-              children: "Main Menu"
+              children: "Nav"
             }), renderSidebar(true)]
           })]
-        }), /* @__PURE__ */ jsxs("span", {
-          className: "font-bold text-lg tracking-tight",
-          children: ["SCAFF", /* @__PURE__ */ jsx("span", {
-            className: "text-orange-600",
-            children: "RENT"
-          })]
+        }), /* @__PURE__ */ jsx("span", {
+          className: "font-black text-lg dark:text-white uppercase tracking-tighter",
+          children: "ScaffRent"
         })]
-      }), /* @__PURE__ */ jsx(UserDropdown, {})]
+      }), /* @__PURE__ */ jsx(Avatar, {
+        className: "h-8 w-8 border-2 border-white dark:border-slate-700 shadow-sm",
+        children: /* @__PURE__ */ jsx(AvatarFallback, {
+          className: "bg-primary text-white text-xs font-bold",
+          children: "AD"
+        })
+      })]
     }), menuPosition === "left" && /* @__PURE__ */ jsx("aside", {
-      className: "hidden md:flex w-64 fixed left-0 top-0 bottom-0 z-40 shadow-sm transition-all duration-400",
+      className: cn("hidden md:flex flex-col fixed left-0 top-0 bottom-0 z-40 sidebar-transition bg-white dark:bg-slate-900 border-r dark:border-slate-800 shadow-xl", isCollapsed ? "w-20" : "w-72"),
       children: renderSidebar()
     }), /* @__PURE__ */ jsxs("div", {
-      className: cn("flex-1 flex flex-col min-w-0 transition-all duration-400 h-screen", menuPosition === "left" ? "md:pl-64" : ""),
+      className: cn("flex-1 flex flex-col min-w-0 transition-all duration-300", menuPosition === "left" ? isCollapsed ? "md:ml-20" : "md:ml-72" : ""),
       children: [/* @__PURE__ */ jsxs("header", {
-        className: "hidden md:flex h-16 border-b bg-white items-center justify-between px-8 sticky top-0 z-30 shadow-sm",
-        children: [menuPosition === "top" ? (
-          // Top Nav Layout
-          /* @__PURE__ */ jsxs("div", {
-            className: "flex items-center gap-6 animate-in fade-in slide-in-from-top-1 duration-400",
-            children: [/* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx("div", {
-                className: "h-8 w-8 bg-orange-600 rounded-md flex items-center justify-center text-white font-bold shadow-sm",
-                children: "S"
-              }), /* @__PURE__ */ jsxs("span", {
-                className: "font-bold text-xl tracking-tight text-slate-900",
-                children: ["SCAFF", /* @__PURE__ */ jsx("span", {
-                  className: "text-orange-600",
-                  children: "RENT"
-                })]
+        className: "hidden md:flex h-16 border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-md items-center justify-between px-8 sticky top-0 z-30 shadow-sm flex shrink-0",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "flex items-center gap-6",
+          children: [/* @__PURE__ */ jsx(Button, {
+            variant: "ghost",
+            size: "icon",
+            className: "bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg hidden md:flex",
+            onClick: () => setIsCollapsed(!isCollapsed),
+            children: /* @__PURE__ */ jsx(AlignLeft, {
+              size: 20
+            })
+          }), menuPosition === "top" && /* @__PURE__ */ jsxs("div", {
+            className: "flex items-center gap-2 mr-4",
+            children: [/* @__PURE__ */ jsx("div", {
+              className: "h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-white font-black shadow-lg",
+              children: "S"
+            }), /* @__PURE__ */ jsxs("span", {
+              className: "font-black text-xl tracking-tighter dark:text-white",
+              children: ["SCAFF", /* @__PURE__ */ jsx("span", {
+                className: "text-primary",
+                children: "RENT"
               })]
-            }), /* @__PURE__ */ jsx("div", {
-              className: "h-6 w-px bg-slate-200 mx-2"
-            }), /* @__PURE__ */ jsx(TopNavigation, {})]
-          })
-        ) : (
-          // Left Sidebar Header Layout
-          /* @__PURE__ */ jsx("h1", {
-            className: "font-semibold text-lg text-slate-800 animate-in fade-in slide-in-from-left-1 duration-400",
-            children: "Workspace"
-          })
-        ), /* @__PURE__ */ jsxs("div", {
-          className: "flex items-center gap-4",
-          children: [/* @__PURE__ */ jsxs("div", {
-            className: "text-right",
-            children: [/* @__PURE__ */ jsx("p", {
-              className: "text-sm font-medium text-slate-900",
-              children: "Admin User"
-            }), /* @__PURE__ */ jsx("p", {
-              className: "text-xs text-muted-foreground",
-              children: "Owner"
             })]
-          }), /* @__PURE__ */ jsx(UserDropdown, {})]
+          }), menuPosition === "top" ? /* @__PURE__ */ jsx(TopNavigation, {}) : /* @__PURE__ */ jsxs("h1", {
+            className: "font-bold text-slate-500 text-[10px] tracking-[0.2em] uppercase",
+            children: ["Workspace / ", /* @__PURE__ */ jsx("span", {
+              className: "text-slate-900 dark:text-white",
+              children: location.pathname === "/" ? "Dashboard" : location.pathname.split("/").pop()?.replace("-", " ")
+            })]
+          })]
+        }), /* @__PURE__ */ jsxs(DropdownMenu, {
+          children: [/* @__PURE__ */ jsx(DropdownMenuTrigger, {
+            asChild: true,
+            children: /* @__PURE__ */ jsxs("div", {
+              className: "flex items-center gap-3 cursor-pointer group",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "text-right hidden sm:block",
+                children: [/* @__PURE__ */ jsx("p", {
+                  className: "text-sm font-bold text-slate-900 dark:text-white",
+                  children: "Admin User"
+                }), /* @__PURE__ */ jsx("p", {
+                  className: "text-[10px] uppercase tracking-widest text-primary font-bold",
+                  children: "Owner"
+                })]
+              }), /* @__PURE__ */ jsx(Avatar, {
+                className: "h-9 w-9 border-2 border-white dark:border-slate-700 shadow-md",
+                children: /* @__PURE__ */ jsx(AvatarFallback, {
+                  className: "bg-primary text-white font-bold",
+                  children: "AD"
+                })
+              })]
+            })
+          }), /* @__PURE__ */ jsxs(DropdownMenuContent, {
+            align: "end",
+            className: "w-64 p-2 dark:bg-slate-900",
+            children: [/* @__PURE__ */ jsx(DropdownMenuLabel, {
+              children: "Settings"
+            }), /* @__PURE__ */ jsx(DropdownMenuSeparator, {}), /* @__PURE__ */ jsxs("div", {
+              className: "flex items-center justify-between px-2 py-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-sm",
+                children: "Horizontal Menu"
+              }), /* @__PURE__ */ jsx(Switch, {
+                checked: menuPosition === "top",
+                onCheckedChange: (c) => {
+                  setMenuPosition(c ? "top" : "left");
+                  localStorage.setItem("menuPosition", c ? "top" : "left");
+                }
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex items-center justify-between px-2 py-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-sm",
+                children: "Dark Mode"
+              }), /* @__PURE__ */ jsx(Switch, {
+                checked: theme === "dark",
+                onCheckedChange: (c) => setTheme(c ? "dark" : "light")
+              })]
+            }), /* @__PURE__ */ jsx(DropdownMenuSeparator, {}), /* @__PURE__ */ jsxs(DropdownMenuItem, {
+              onClick: handleLogout,
+              className: "text-red-600 font-bold cursor-pointer",
+              children: [/* @__PURE__ */ jsx(LogOut, {
+                className: "mr-2 h-4 w-4"
+              }), " Logout"]
+            })]
+          })]
         })]
       }), /* @__PURE__ */ jsx("div", {
-        className: "flex-1 overflow-auto p-4 md:p-8 pt-20 md:pt-8 pb-20 md:pb-8 animate-in fade-in slide-in-from-bottom-3 duration-400 ease-out",
-        children: /* @__PURE__ */ jsx(Outlet, {})
-      }, location.pathname)]
+        className: "flex-1 overflow-auto p-4 md:p-10 no-scrollbar",
+        children: /* @__PURE__ */ jsx(ClientOnly, {
+          children: /* @__PURE__ */ jsx("div", {
+            className: "animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out",
+            children: /* @__PURE__ */ jsx(Outlet, {})
+          }, location.pathname)
+        })
+      })]
     }), /* @__PURE__ */ jsx(Toaster, {
       position: "top-right",
       richColors: true
     })]
+  });
+}
+const dashboardLayout = UNSAFE_withComponentProps(function DashboardLayoutWrapper() {
+  return /* @__PURE__ */ jsx(ThemeProvider, {
+    defaultTheme: "light",
+    storageKey: "vite-ui-theme",
+    children: /* @__PURE__ */ jsx(ThemeColorProvider, {
+      defaultColor: "orange",
+      storageKey: "scaff-ui-color",
+      children: /* @__PURE__ */ jsx(DashboardContent, {})
+    })
   });
 });
 const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -919,16 +1055,6 @@ function CardContent({ className, ...props }) {
     }
   );
 }
-function CardFooter({ className, ...props }) {
-  return /* @__PURE__ */ jsx(
-    "div",
-    {
-      "data-slot": "card-footer",
-      className: cn("flex items-center px-6 [.border-t]:pt-6", className),
-      ...props
-    }
-  );
-}
 const BentoGrid = ({
   className,
   children
@@ -961,7 +1087,7 @@ const BentoItem = ({
     }
   );
 };
-function meta$q({}) {
+function meta$u({}) {
   return [{
     title: "Dashboard - ScaffRent"
   }];
@@ -1301,7 +1427,7 @@ const home = UNSAFE_withComponentProps(function Home() {
 const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: home,
-  meta: meta$q
+  meta: meta$u
 }, Symbol.toStringTag, { value: "Module" }));
 function Input({ className, type, ...props }) {
   return /* @__PURE__ */ jsx(
@@ -1388,7 +1514,7 @@ const validateHSN = (hsn) => {
   }
   return true;
 };
-function meta$p({}) {
+function meta$t({}) {
   return [{
     title: "Company Profile - ScaffRent"
   }];
@@ -1621,7 +1747,7 @@ const company = UNSAFE_withComponentProps(function CompanyProfile() {
 const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: company,
-  meta: meta$p
+  meta: meta$t
 }, Symbol.toStringTag, { value: "Module" }));
 function Dialog({
   ...props
@@ -1888,7 +2014,7 @@ const TabsContent = React.forwardRef(({ className, ...props }, ref) => /* @__PUR
   }
 ));
 TabsContent.displayName = TabsPrimitive.Content.displayName;
-function meta$o({}) {
+function meta$s({}) {
   return [{
     title: "Customers - ScaffRent"
   }];
@@ -2277,7 +2403,7 @@ const customers = UNSAFE_withComponentProps(function Customers() {
 const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: customers,
-  meta: meta$o
+  meta: meta$s
 }, Symbol.toStringTag, { value: "Module" }));
 const badgeVariants = cva(
   "inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
@@ -2311,7 +2437,7 @@ function Badge({
     }
   );
 }
-function meta$n({}) {
+function meta$r({}) {
   return [{
     title: "Sites - ScaffRent"
   }];
@@ -2603,7 +2729,7 @@ const sites = UNSAFE_withComponentProps(function Sites() {
 const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: sites,
-  meta: meta$n
+  meta: meta$r
 }, Symbol.toStringTag, { value: "Module" }));
 function Table({ className, ...props }) {
   return /* @__PURE__ */ jsx(
@@ -2681,7 +2807,7 @@ function TableCell({ className, ...props }) {
     }
   );
 }
-function meta$m({}) {
+function meta$q({}) {
   return [{
     title: "Challans - ScaffRent"
   }];
@@ -2723,13 +2849,13 @@ const challans = UNSAFE_withComponentProps(function Challans() {
       const headers = {
         "Authorization": `Bearer ${token}`
       };
-      const [custRes, siteRes, itemRes, challanRes] = await Promise.all([fetch("/api/masters/customers", {
+      const [custRes, siteRes, itemRes, challanRes] = await Promise.all([fetch("http://localhost:5000/api/masters/customers", {
         headers
-      }), fetch("/api/sites", {
+      }), fetch("http://localhost:5000/api/sites", {
         headers
-      }), fetch("/api/masters/items", {
+      }), fetch("http://localhost:5000/api/masters/items", {
         headers
-      }), fetch("/api/challans", {
+      }), fetch("http://localhost:5000/api/challans", {
         headers
       })]);
       if (custRes.ok) setCustomers(await custRes.json());
@@ -2806,7 +2932,7 @@ const challans = UNSAFE_withComponentProps(function Challans() {
       }))
     };
     const token = localStorage.getItem("token");
-    const url = editingId ? `/api/challans/${editingId}` : "/api/challans";
+    const url = editingId ? `http://localhost:5000/api/challans/${editingId}` : "http://localhost:5000/api/challans";
     const method = editingId ? "PUT" : "POST";
     try {
       const res = await fetch(url, {
@@ -2822,7 +2948,7 @@ const challans = UNSAFE_withComponentProps(function Challans() {
         setIsOpen(false);
         reset();
         setCart([]);
-        const updatedList = await fetch("/api/challans", {
+        const updatedList = await fetch("http://localhost:5000/api/challans", {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -3099,7 +3225,7 @@ const challans = UNSAFE_withComponentProps(function Challans() {
 const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: challans,
-  meta: meta$m
+  meta: meta$q
 }, Symbol.toStringTag, { value: "Module" }));
 function Textarea({ className, ...props }) {
   return /* @__PURE__ */ jsx(
@@ -3114,7 +3240,27 @@ function Textarea({ className, ...props }) {
     }
   );
 }
-function meta$l({}) {
+function Separator({
+  className,
+  orientation = "horizontal",
+  decorative = true,
+  ...props
+}) {
+  return /* @__PURE__ */ jsx(
+    SeparatorPrimitive.Root,
+    {
+      "data-slot": "separator",
+      decorative,
+      orientation,
+      className: cn(
+        "bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
+        className
+      ),
+      ...props
+    }
+  );
+}
+function meta$p({}) {
   return [{
     title: "Delivery Challan - ScaffRent"
   }];
@@ -3124,8 +3270,7 @@ const dcSchema = z.object({
   customer: z.string().min(1, "Select Customer"),
   site: z.string().min(1, "Select Site"),
   warehouse: z.string().min(1, "Select Warehouse"),
-  referenceOrder: z.string().optional(),
-  // Can be optional if only Manual Items are added
+  referenceOrder: z.string().optional().or(z.literal("")),
   vehicleNo: z.string().optional(),
   driverName: z.string().optional(),
   driverMobile: z.string().optional(),
@@ -3141,6 +3286,7 @@ const deliveryChallans = UNSAFE_withComponentProps(function DeliveryChallans() {
   const [pendingOrders, setPendingOrders] = useState([]);
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
@@ -3150,7 +3296,10 @@ const deliveryChallans = UNSAFE_withComponentProps(function DeliveryChallans() {
     handleSubmit,
     watch,
     setValue,
-    reset
+    reset,
+    formState: {
+      errors
+    }
   } = useForm({
     resolver: zodResolver(dcSchema),
     defaultValues: {
@@ -3174,29 +3323,22 @@ const deliveryChallans = UNSAFE_withComponentProps(function DeliveryChallans() {
       "Authorization": `Bearer ${token}`
     };
     try {
-      const [c, s, w, d, i] = await Promise.all([
-        fetch("/api/masters/customers", {
-          headers: h
-        }).then((r) => r.json()),
-        fetch("/api/sites", {
-          headers: h
-        }).then((r) => r.json()),
-        fetch("/api/masters/warehouses", {
-          headers: h
-        }).then((r) => r.json()),
-        fetch("/api/store/delivery-challans", {
-          headers: h
-        }).then((r) => r.json()),
-        fetch("/api/masters/items", {
-          headers: h
-        }).then((r) => r.json())
-        // ✅ Fetch Items
-      ]);
-      setCustomers(c);
-      setSites(s);
-      setWarehouses(w);
-      setChallans(d);
-      setItems(i);
+      const [c, s, w, d, i] = await Promise.all([fetch("/api/masters/customers", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/sites", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/warehouses", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/store/delivery-challans", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/items", {
+        headers: h
+      }).then((r) => r.json())]);
+      setCustomers(Array.isArray(c) ? c : []);
+      setSites(Array.isArray(s) ? s : []);
+      setWarehouses(Array.isArray(w) ? w : []);
+      setChallans(Array.isArray(d) ? d : []);
+      setItems(Array.isArray(i) ? i : []);
     } catch (e) {
       console.error(e);
     }
@@ -3208,34 +3350,28 @@ const deliveryChallans = UNSAFE_withComponentProps(function DeliveryChallans() {
     if (watchCustomer) {
       const cust = customers2.find((c) => c._id === watchCustomer);
       setSelectedCustomer(cust);
-      const relSites = sites2.filter((s) => s.customer?._id === watchCustomer);
-      setFilteredSites(relSites);
+      setFilteredSites(sites2.filter((s) => s.customer?._id === watchCustomer));
     } else {
       setSelectedCustomer(null);
       setFilteredSites([]);
     }
-  }, [watchCustomer]);
+  }, [watchCustomer, customers2, sites2]);
   useEffect(() => {
     if (watchCustomer && watchSite && !editingId) {
       const site = sites2.find((s) => s._id === watchSite);
       setSelectedSite(site);
-      const fetchOrders = async () => {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`/api/store/pending-orders?customerId=${watchCustomer}&siteId=${watchSite}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
-        if (res.ok) setPendingOrders(await res.json());
-      };
-      fetchOrders();
+      fetch(`/api/store/pending-orders?customerId=${watchCustomer}&siteId=${watchSite}`, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        }
+      }).then((r) => r.json()).then((data) => setPendingOrders(Array.isArray(data) ? data : []));
     }
-  }, [watchSite]);
+  }, [watchSite, watchCustomer, editingId, sites2]);
   useEffect(() => {
     if (watchOrder && !editingId) {
       const order = pendingOrders.find((o) => o._id === watchOrder);
       if (order) {
-        const gridData = order.items.map((i) => ({
+        setRows(order.items.map((i) => ({
           item: i.item,
           itemCode: i.itemCode,
           itemName: i.itemName,
@@ -3243,96 +3379,16 @@ const deliveryChallans = UNSAFE_withComponentProps(function DeliveryChallans() {
           orderQty: i.orderQty,
           pendingQty: i.pending,
           currentQty: i.pending,
-          // Default to max
           rate: i.rate,
           amount: i.rate * i.pending,
           isManual: false
-          // ✅ Flag to mark auto-fetched items
-        }));
-        setRows(gridData);
+        })));
       }
-    } else if (!editingId && !watchOrder) {
-      setRows([]);
     }
-  }, [watchOrder]);
-  const handleAddManualItem = () => {
-    setRows([...rows, {
-      item: "",
-      itemCode: "",
-      itemName: "",
-      unit: "",
-      orderQty: 0,
-      pendingQty: 0,
-      currentQty: 1,
-      rate: 0,
-      amount: 0,
-      isManual: true
-      // ✅ Flag for manual items
-    }]);
-  };
-  const handleManualItemSelect = (index, itemId) => {
-    const selectedItem = items2.find((i) => i._id === itemId);
-    if (!selectedItem) return;
-    const newRows = [...rows];
-    newRows[index] = {
-      ...newRows[index],
-      item: selectedItem._id,
-      itemCode: selectedItem.code,
-      itemName: selectedItem.name,
-      unit: selectedItem.unit,
-      rate: selectedItem.monthlyRentRate || selectedItem.sellRate || 0,
-      // Fallback rates
-      amount: (selectedItem.monthlyRentRate || 0) * newRows[index].currentQty
-    };
-    setRows(newRows);
-  };
-  const handleQtyChange = (index, val) => {
-    const v = parseFloat(val) || 0;
-    const newRows = [...rows];
-    const row = newRows[index];
-    if (!row.isManual && v > row.pendingQty) {
-      toast.error(`Max pending quantity is ${row.pendingQty}`);
-      row.currentQty = row.pendingQty;
-    } else {
-      row.currentQty = v;
-    }
-    row.amount = row.currentQty * row.rate;
-    setRows(newRows);
-  };
-  const removeRow = (index) => {
-    const newRows = [...rows];
-    newRows.splice(index, 1);
-    setRows(newRows);
-  };
-  const handleEdit = (dc) => {
-    setEditingId(dc._id);
-    setValue("date", dc.date.split("T")[0]);
-    setValue("customer", dc.customer._id);
-    setValue("site", dc.site._id);
-    setValue("warehouse", dc.warehouse);
-    setValue("referenceOrder", dc.referenceOrder._id);
-    setValue("vehicleNo", dc.vehicleNo);
-    setValue("driverName", dc.driverName);
-    setValue("driverMobile", dc.driverMobile);
-    setValue("remark", dc.remark);
-    const grid = dc.items.map((i) => ({
-      item: i.item._id,
-      itemCode: i.item.code || "ITM",
-      itemName: i.itemName,
-      unit: i.unit,
-      orderQty: i.orderQty || 0,
-      pendingQty: i.pendingQty || 0,
-      currentQty: i.currentQty,
-      rate: i.rate,
-      amount: i.amount,
-      isManual: i.orderQty === 0 || i.orderQty === void 0
-      // Infer if manual
-    }));
-    setRows(grid);
-    setOpen(true);
-  };
+  }, [watchOrder, pendingOrders, editingId]);
   const handleAdd = () => {
     setEditingId(null);
+    setViewMode(false);
     setRows([]);
     reset({
       date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
@@ -3347,13 +3403,71 @@ const deliveryChallans = UNSAFE_withComponentProps(function DeliveryChallans() {
     });
     setOpen(true);
   };
+  const handleEdit = (dc) => {
+    setEditingId(dc._id);
+    setViewMode(false);
+    reset({
+      date: dc.date.split("T")[0],
+      customer: dc.customer?._id,
+      site: dc.site?._id,
+      warehouse: dc.warehouse,
+      referenceOrder: dc.referenceOrder?._id || "",
+      vehicleNo: dc.vehicleNo,
+      driverName: dc.driverName,
+      driverMobile: dc.driverMobile,
+      remark: dc.remark
+    });
+    setRows(dc.items.map((i) => ({
+      ...i,
+      item: i.item?._id || i.item,
+      itemCode: i.item?.code || "ITM",
+      isManual: !i.orderQty
+    })));
+    setOpen(true);
+  };
+  const handleView = (dc) => {
+    handleEdit(dc);
+    setViewMode(true);
+  };
+  const handleAddManualItem = () => {
+    setRows([...rows, {
+      item: "",
+      itemCode: "",
+      itemName: "",
+      unit: "",
+      orderQty: 0,
+      pendingQty: 0,
+      currentQty: 1,
+      rate: 0,
+      amount: 0,
+      isManual: true
+    }]);
+  };
+  const handleManualItemSelect = (index, itemId) => {
+    const itm = items2.find((i) => i._id === itemId);
+    if (!itm) return;
+    const newRows = [...rows];
+    newRows[index] = {
+      ...newRows[index],
+      item: itemId,
+      itemCode: itm.code,
+      itemName: itm.name,
+      unit: itm.unit,
+      rate: itm.monthlyRentRate || 0,
+      amount: (itm.monthlyRentRate || 0) * newRows[index].currentQty
+    };
+    setRows(newRows);
+  };
+  const handleQtyChange = (index, val) => {
+    const v = parseFloat(val) || 0;
+    const newRows = [...rows];
+    newRows[index].currentQty = v;
+    newRows[index].amount = v * newRows[index].rate;
+    setRows(newRows);
+  };
   const onSubmit = async (data) => {
     const finalItems = rows.filter((r) => r.currentQty > 0 && r.item);
-    if (finalItems.length === 0) return toast.error("No valid items to deliver");
-    const payload = {
-      ...data,
-      items: finalItems
-    };
+    if (finalItems.length === 0) return toast.error("No items added");
     const token = localStorage.getItem("token");
     const url = editingId ? `/api/store/delivery-challans/${editingId}` : "/api/store/delivery-challans";
     const method = editingId ? "PUT" : "POST";
@@ -3363,31 +3477,49 @@ const deliveryChallans = UNSAFE_withComponentProps(function DeliveryChallans() {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        ...data,
+        items: finalItems
+      })
     });
     if (res.ok) {
-      toast.success(editingId ? "Challan Updated" : "Challan Created");
+      toast.success("Saved!");
       setOpen(false);
-      reset();
-      setRows([]);
       fetchAll();
-    } else {
-      toast.error("Failed to save");
     }
   };
   return /* @__PURE__ */ jsxs("div", {
     className: "space-y-6",
     children: [/* @__PURE__ */ jsxs("div", {
-      className: "flex justify-between items-center",
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
       children: [/* @__PURE__ */ jsx("h2", {
-        className: "text-2xl font-bold",
+        className: "text-xl font-bold text-slate-800 dark:text-white uppercase tracking-tight",
         children: "Delivery Challans"
-      }), /* @__PURE__ */ jsxs(Button, {
-        onClick: handleAdd,
-        className: "bg-orange-600 hover:bg-orange-700 hover-card-glow",
-        children: [/* @__PURE__ */ jsx(Plus, {
-          className: "mr-2 h-4 w-4"
-        }), " Create DC"]
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search Challans...",
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none"
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 border",
+          onClick: fetchAll,
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
+        }), /* @__PURE__ */ jsxs(Button, {
+          onClick: handleAdd,
+          className: "bg-[#2196F3] hover:bg-[#1976D2] text-white h-10 px-6 font-bold shadow-md",
+          children: [/* @__PURE__ */ jsx(Plus, {
+            className: "mr-2 h-4 w-4"
+          }), " Add"]
+        })]
       })]
     }), /* @__PURE__ */ jsx(Dialog, {
       open,
@@ -3396,346 +3528,335 @@ const deliveryChallans = UNSAFE_withComponentProps(function DeliveryChallans() {
         className: "sm:max-w-[1000px] max-h-[95vh] overflow-y-auto",
         children: [/* @__PURE__ */ jsx(DialogHeader, {
           children: /* @__PURE__ */ jsx(DialogTitle, {
-            children: editingId ? "Edit Delivery Challan" : "New Delivery Challan"
+            children: viewMode ? "View Challan" : editingId ? "Edit Challan" : "New Delivery Challan"
           })
         }), /* @__PURE__ */ jsxs("form", {
           onSubmit: handleSubmit(onSubmit),
           className: "space-y-6 py-2",
-          children: [/* @__PURE__ */ jsxs("div", {
-            className: "grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg border",
+          children: [/* @__PURE__ */ jsxs("fieldset", {
+            disabled: viewMode,
+            className: "space-y-6",
             children: [/* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Doc Date"
-              }), /* @__PURE__ */ jsx(Input, {
-                type: "date",
-                ...register2("date")
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Customer"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "customer",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  disabled: !!editingId,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: c._id,
-                      children: c.name
-                    }, c._id))
-                  })]
-                })
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Site"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "site",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  disabled: !watchCustomer || !!editingId,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: s._id,
-                      children: s.name
-                    }, s._id))
-                  })]
-                })
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "md:col-span-3 grid grid-cols-2 gap-4 text-xs text-slate-500",
+              className: "grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border",
               children: [/* @__PURE__ */ jsxs("div", {
-                children: [/* @__PURE__ */ jsx("strong", {
-                  children: "Billing:"
-                }), " ", selectedCustomer?.billingAddress || "-"]
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Date"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "date",
+                  ...register2("date")
+                })]
               }), /* @__PURE__ */ jsxs("div", {
-                children: [/* @__PURE__ */ jsx("strong", {
-                  children: "Site:"
-                }), " ", selectedSite?.address || "-"]
-              })]
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "grid grid-cols-1 md:grid-cols-2 gap-4",
-            children: [/* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                className: "text-orange-600",
-                children: "Against Order (Ref)"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "referenceOrder",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  disabled: !watchSite || !!editingId,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select Pending Order"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: pendingOrders.length === 0 ? /* @__PURE__ */ jsx("div", {
-                      className: "p-2 text-xs text-slate-400",
-                      children: "No pending orders"
-                    }) : pendingOrders.map((o) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: o._id,
-                      children: o.docNo
-                    }, o._id))
-                  })]
-                })
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "From Warehouse"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "warehouse",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: warehouses2.map((w) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: w._id,
-                      children: w.name
-                    }, w._id))
-                  })]
-                })
-              })]
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "grid grid-cols-3 gap-4",
-            children: [/* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Vehicle No"
-              }), /* @__PURE__ */ jsx(Input, {
-                ...register2("vehicleNo")
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Driver Name"
-              }), /* @__PURE__ */ jsx(Input, {
-                ...register2("driverName")
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Driver Mobile"
-              }), /* @__PURE__ */ jsx(Input, {
-                ...register2("driverMobile")
-              })]
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "border rounded-md overflow-hidden",
-            children: [/* @__PURE__ */ jsxs(Table, {
-              children: [/* @__PURE__ */ jsx(TableHeader, {
-                children: /* @__PURE__ */ jsxs(TableRow, {
-                  className: "bg-slate-100",
-                  children: [/* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[50px]",
-                    children: "Sr."
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[120px]",
-                    children: "Item ID"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    children: "Item Name"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right",
-                    children: "Order Qty"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right",
-                    children: "Pending"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[100px] text-right text-orange-600 font-bold",
-                    children: "Curr. Qty"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right",
-                    children: "Rate"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right",
-                    children: "Amount"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[50px]"
-                  })]
-                })
-              }), /* @__PURE__ */ jsx(TableBody, {
-                children: rows.length === 0 ? /* @__PURE__ */ jsx(TableRow, {
-                  children: /* @__PURE__ */ jsx(TableCell, {
-                    colSpan: 9,
-                    className: "text-center h-20 text-slate-400",
-                    children: "Select an order or add manual items"
-                  })
-                }) : rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
-                  children: [/* @__PURE__ */ jsx(TableCell, {
-                    children: i + 1
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "font-mono text-xs",
-                    children: row.itemCode
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: row.isManual ? /* @__PURE__ */ jsxs(Select, {
-                      value: row.item,
-                      onValueChange: (val) => handleManualItemSelect(i, val),
-                      children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                        className: "h-8 min-w-[150px]",
-                        children: /* @__PURE__ */ jsx(SelectValue, {
-                          placeholder: "Select Item"
-                        })
-                      }), /* @__PURE__ */ jsx(SelectContent, {
-                        children: items2.map((it) => /* @__PURE__ */ jsx(SelectItem, {
-                          value: it._id,
-                          children: it.name
-                        }, it._id))
-                      })]
-                    }) : /* @__PURE__ */ jsxs("div", {
-                      className: "flex flex-col",
-                      children: [/* @__PURE__ */ jsx("span", {
-                        children: row.itemName
-                      }), /* @__PURE__ */ jsx("span", {
-                        className: "text-[10px] text-slate-400",
-                        children: row.unit
-                      })]
-                    })
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "text-right text-slate-500",
-                    children: row.orderQty || "-"
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "text-right text-orange-600 font-medium",
-                    children: row.pendingQty || "-"
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Input, {
-                      type: "number",
-                      className: "text-right h-8 font-bold border-orange-200 focus-visible:ring-orange-500",
-                      value: row.currentQty,
-                      onChange: (e) => handleQtyChange(i, e.target.value)
-                    })
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "text-right",
-                    children: row.rate
-                  }), /* @__PURE__ */ jsxs(TableCell, {
-                    className: "text-right font-medium",
-                    children: ["₹", row.amount.toFixed(2)]
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: row.isManual && /* @__PURE__ */ jsx(Button, {
-                      type: "button",
-                      variant: "ghost",
-                      size: "icon",
-                      onClick: () => removeRow(i),
-                      children: /* @__PURE__ */ jsx(Trash2, {
-                        className: "h-4 w-4 text-red-500"
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Customer"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "customer",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
                       })
-                    })
-                  })]
-                }, i))
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: c._id,
+                        children: c.name
+                      }, c._id))
+                    })]
+                  }, customers2.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Site"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "site",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !watchCustomer || !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: s._id,
+                        children: s.name
+                      }, s._id))
+                    })]
+                  }, filteredSites.length)
+                })]
               })]
-            }), /* @__PURE__ */ jsx("div", {
-              className: "p-2 border-t bg-slate-50 flex justify-center",
-              children: /* @__PURE__ */ jsxs(Button, {
-                type: "button",
-                variant: "outline",
-                size: "sm",
-                onClick: handleAddManualItem,
-                className: "border-dashed text-slate-600",
-                children: [/* @__PURE__ */ jsx(Plus, {
-                  className: "mr-2 h-4 w-4"
-                }), " Add Extra Item"]
-              })
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-1 md:grid-cols-2 gap-4",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Against Order Reference"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "referenceOrder",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !watchSite || !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select Order"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: pendingOrders.map((o) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: o._id,
+                        children: o.docNo
+                      }, o._id))
+                    })]
+                  }, pendingOrders.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Warehouse"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "warehouse",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: warehouses2.map((w) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: w._id,
+                        children: w.name
+                      }, w._id))
+                    })]
+                  }, warehouses2.length)
+                })]
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-3 gap-4",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Vehicle No"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("vehicleNo")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Driver"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("driverName")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Mobile"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("driverMobile")
+                })]
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "border rounded-md overflow-hidden",
+              children: [/* @__PURE__ */ jsxs(Table, {
+                children: [/* @__PURE__ */ jsx(TableHeader, {
+                  children: /* @__PURE__ */ jsxs(TableRow, {
+                    className: "bg-slate-100 dark:bg-slate-800",
+                    children: [/* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[50px]",
+                      children: "Sr."
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Item ID"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Item Name"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Qty"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Rate"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Amount"
+                    }), !viewMode && /* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[40px]"
+                    })]
+                  })
+                }), /* @__PURE__ */ jsx(TableBody, {
+                  children: rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
+                    children: [/* @__PURE__ */ jsx(TableCell, {
+                      children: i + 1
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      className: "font-mono text-xs",
+                      children: row.itemCode
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: row.isManual ? /* @__PURE__ */ jsxs(Select, {
+                        value: row.item,
+                        onValueChange: (v) => handleManualItemSelect(i, v),
+                        children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                          className: "h-8",
+                          children: /* @__PURE__ */ jsx(SelectValue, {
+                            placeholder: "Select"
+                          })
+                        }), /* @__PURE__ */ jsx(SelectContent, {
+                          children: items2.map((it) => /* @__PURE__ */ jsx(SelectItem, {
+                            value: it._id,
+                            children: it.name
+                          }, it._id))
+                        })]
+                      }) : /* @__PURE__ */ jsx("span", {
+                        children: row.itemName
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "h-8 text-right",
+                        value: row.currentQty,
+                        onChange: (e) => handleQtyChange(i, e.target.value)
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      className: "text-right",
+                      children: row.rate
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right font-bold",
+                      children: ["₹", row.amount.toFixed(2)]
+                    }), !viewMode && /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Button, {
+                        variant: "ghost",
+                        size: "icon",
+                        onClick: () => {
+                          const n = [...rows];
+                          n.splice(i, 1);
+                          setRows(n);
+                        },
+                        children: /* @__PURE__ */ jsx(Trash2, {
+                          className: "h-4 w-4 text-red-500"
+                        })
+                      })
+                    })]
+                  }, i))
+                })]
+              }), !viewMode && /* @__PURE__ */ jsx("div", {
+                className: "p-3 flex justify-center border-t bg-slate-50/50",
+                children: /* @__PURE__ */ jsxs(Button, {
+                  type: "button",
+                  variant: "outline",
+                  size: "sm",
+                  onClick: handleAddManualItem,
+                  className: "border-dashed",
+                  children: [/* @__PURE__ */ jsx(Plus, {
+                    size: 14,
+                    className: "mr-1"
+                  }), " Add Extra Item"]
+                })
+              })]
             })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Remark"
-            }), /* @__PURE__ */ jsx(Textarea, {
-              ...register2("remark"),
-              placeholder: "Optional notes",
-              className: "h-16"
-            })]
-          }), /* @__PURE__ */ jsx(DialogFooter, {
-            className: "flex justify-end gap-2",
-            children: /* @__PURE__ */ jsx(Button, {
-              type: "submit",
-              className: "hover-card-glow bg-orange-600 px-6",
-              children: editingId ? "Update Challan" : "Generate Challan"
-            })
+          }), !viewMode && /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            className: "w-full bg-primary font-bold h-12 uppercase",
+            children: "Save Challan"
           })]
         })]
       })
     }), /* @__PURE__ */ jsx("div", {
-      className: "grid gap-10 md:grid-cols-4 lg:grid-cols-4",
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
       children: challans2.map((dc) => /* @__PURE__ */ jsx(Card, {
-        className: "relative hover-card-glow hover:shadow-md transition-all",
+        className: "overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 group bg-white dark:bg-slate-900",
         children: /* @__PURE__ */ jsxs(CardContent, {
-          className: "p-5",
-          children: [/* @__PURE__ */ jsx(Button, {
-            variant: "ghost",
-            size: "icon",
-            className: "absolute top-2 right-2 text-slate-400 hover:text-orange-600",
-            onClick: () => handleEdit(dc),
-            children: /* @__PURE__ */ jsx(Pencil, {
-              className: "h-4 w-4"
-            })
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "flex justify-between items-start mb-3",
+          className: "p-0",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "p-4 flex justify-between items-center border-b bg-slate-50/50 dark:bg-slate-800/50",
             children: [/* @__PURE__ */ jsx("span", {
-              className: "font-bold text-lg text-slate-800",
+              className: "font-black text-slate-800 dark:text-white text-sm tracking-tight",
               children: dc.docNo
-            }), /* @__PURE__ */ jsx(Badge, {
-              variant: "outline",
-              className: "text-xs",
-              children: new Date(dc.date).toLocaleDateString()
+            }), /* @__PURE__ */ jsx("span", {
+              className: "text-[11px] font-bold text-slate-500",
+              children: format(new Date(dc.date), "dd-MMM-yyyy")
             })]
           }), /* @__PURE__ */ jsxs("div", {
-            className: "text-sm space-y-1 text-slate-600",
+            className: "p-5 space-y-3",
             children: [/* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx(User, {
-                className: "h-3 w-3"
-              }), " ", dc.customer?.name]
+              className: "flex justify-between items-start gap-2 text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase",
+                children: "Customer:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-800 dark:text-slate-200 text-right truncate flex-1",
+                children: dc.customer?.name || "N/A"
+              })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx(MapPin, {
-                className: "h-3 w-3"
-              }), " ", dc.site?.name]
+              className: "flex justify-between items-start gap-2 text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase",
+                children: "Site:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-medium text-slate-600 dark:text-slate-400 text-right truncate flex-1",
+                children: dc.site?.name || "-"
+              })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx(Truck, {
-                className: "h-3 w-3"
-              }), " ", dc.vehicleNo || "No Vehicle"]
+              className: "flex justify-between items-center text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase",
+                children: "Vehicle:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-primary uppercase",
+                children: dc.vehicleNo || "N/A"
+              })]
+            }), /* @__PURE__ */ jsx(Separator, {
+              className: "opacity-50"
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1 text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-900 dark:text-white font-black uppercase",
+                children: "Items Sent:"
+              }), /* @__PURE__ */ jsxs("span", {
+                className: "font-black text-primary",
+                children: [dc.items?.length || 0, " SKUs"]
+              })]
             })]
           }), /* @__PURE__ */ jsxs("div", {
-            className: "mt-4 pt-3 border-t flex justify-between text-xs font-medium text-slate-500",
-            children: [/* @__PURE__ */ jsxs("span", {
-              children: ["Ref: ", dc.referenceOrder?.docNo]
-            }), /* @__PURE__ */ jsxs("span", {
-              className: "text-orange-600",
-              children: [dc.items?.length, " Items Sent"]
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-indigo-600 hover:bg-indigo-50 rounded-full",
+              onClick: () => handleView(dc),
+              children: /* @__PURE__ */ jsx(Eye, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-blue-500 hover:bg-blue-50 rounded-full",
+              onClick: () => handleEdit(dc),
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-emerald-600 hover:bg-emerald-50 rounded-full",
+              onClick: () => toast.info("Downloading..."),
+              children: /* @__PURE__ */ jsx(CloudDownload, {
+                size: 18
+              })
             })]
           })]
         })
@@ -3746,9 +3867,9 @@ const deliveryChallans = UNSAFE_withComponentProps(function DeliveryChallans() {
 const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: deliveryChallans,
-  meta: meta$l
+  meta: meta$p
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$k({}) {
+function meta$o({}) {
   return [{
     title: "Employees - ScaffRent"
   }];
@@ -4028,9 +4149,9 @@ const employees = UNSAFE_withComponentProps(function Employees() {
 const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: employees,
-  meta: meta$k
+  meta: meta$o
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$j({}) {
+function meta$n({}) {
   return [{
     title: "Item Master - ScaffRent"
   }];
@@ -4395,9 +4516,9 @@ const items = UNSAFE_withComponentProps(function Items() {
 const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: items,
-  meta: meta$j
+  meta: meta$n
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$i({}) {
+function meta$m({}) {
   return [{
     title: "Item Groups - ScaffRent"
   }];
@@ -4572,9 +4693,9 @@ const itemGroups = UNSAFE_withComponentProps(function ItemGroups() {
 const route10 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: itemGroups,
-  meta: meta$i
+  meta: meta$m
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$h({}) {
+function meta$l({}) {
   return [{
     title: "Vendors - ScaffRent"
   }];
@@ -4920,9 +5041,9 @@ const vendors = UNSAFE_withComponentProps(function Vendors() {
 const route11 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: vendors,
-  meta: meta$h
+  meta: meta$l
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$g({}) {
+function meta$k({}) {
   return [{
     title: "Warehouses - ScaffRent"
   }];
@@ -5072,9 +5193,9 @@ const warehouses = UNSAFE_withComponentProps(function Warehouses() {
 const route12 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: warehouses,
-  meta: meta$g
+  meta: meta$k
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$f({}) {
+function meta$j({}) {
   return [{
     title: "Currency Master - ScaffRent"
   }];
@@ -5115,33 +5236,46 @@ const curSchema = z.object({
 });
 const currencies = UNSAFE_withComponentProps(function Currencies() {
   const [currencies2, setCurrencies] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const {
     control,
     handleSubmit,
     reset,
-    setValue
+    setValue,
+    formState: {
+      isSubmitting
+    }
   } = useForm({
     resolver: zodResolver(curSchema)
   });
   const fetchCurrencies = async () => {
     const token = localStorage.getItem("token");
-    const res = await fetch("/api/masters/currencies", {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    });
-    if (res.ok) setCurrencies(await res.json());
+    try {
+      const res = await fetch("/api/masters/currencies", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      if (res.ok) setCurrencies(await res.json());
+    } catch (e) {
+      toast.error("Failed to load currencies");
+    }
   };
   useEffect(() => {
     fetchCurrencies();
   }, []);
+  const filteredData = useMemo(() => {
+    return currencies2.filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.code.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [currencies2, searchTerm]);
   const handleEdit = (cur) => {
     setEditingId(cur._id);
-    setValue("code", cur.code);
-    setValue("name", cur.name);
-    setValue("symbol", cur.symbol);
+    reset({
+      code: cur.code,
+      name: cur.name,
+      symbol: cur.symbol
+    });
     setOpen(true);
   };
   const handleAdd = () => {
@@ -5165,33 +5299,59 @@ const currencies = UNSAFE_withComponentProps(function Currencies() {
     const token = localStorage.getItem("token");
     const url = editingId ? `/api/masters/currencies/${editingId}` : "/api/masters/currencies";
     const method = editingId ? "PUT" : "POST";
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(data)
-    });
-    if (res.ok) {
-      toast.success("Saved!");
-      setOpen(false);
-      fetchCurrencies();
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) {
+        toast.success("Currency saved successfully");
+        setOpen(false);
+        fetchCurrencies();
+      }
+    } catch (e) {
+      toast.error("Error saving data");
     }
   };
   return /* @__PURE__ */ jsxs("div", {
-    className: "space-y-6",
+    className: "space-y-4",
     children: [/* @__PURE__ */ jsxs("div", {
-      className: "flex justify-between items-center",
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
       children: [/* @__PURE__ */ jsx("h2", {
-        className: "text-2xl font-bold",
-        children: "Currency Master"
-      }), /* @__PURE__ */ jsxs(Button, {
-        onClick: handleAdd,
-        className: "hover-card-glow bg-orange-600",
-        children: [/* @__PURE__ */ jsx(Plus, {
-          className: "mr-2 h-4 w-4"
-        }), " Add Currency"]
+        className: "text-xl font-bold text-slate-800 dark:text-white",
+        children: "Currencies"
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search...",
+            value: searchTerm,
+            onChange: (e) => setSearchTerm(e.target.value),
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none focus-visible:ring-primary"
+          }), searchTerm && /* @__PURE__ */ jsx(X, {
+            className: "absolute right-3 top-2.5 h-4 w-4 text-slate-400 cursor-pointer",
+            onClick: () => setSearchTerm("")
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 text-primary border",
+          onClick: fetchCurrencies,
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
+        }), /* @__PURE__ */ jsx(Button, {
+          onClick: handleAdd,
+          className: "bg-[#2196F3] hover:bg-[#1976D2] text-white h-10 px-8 font-bold shadow-md",
+          children: "Add"
+        })]
       })]
     }), /* @__PURE__ */ jsx(Dialog, {
       open,
@@ -5204,7 +5364,7 @@ const currencies = UNSAFE_withComponentProps(function Currencies() {
           })
         }), /* @__PURE__ */ jsxs("form", {
           onSubmit: handleSubmit(onSubmit),
-          className: "space-y-4",
+          className: "space-y-4 py-2",
           children: [/* @__PURE__ */ jsxs("div", {
             className: "space-y-2",
             children: [/* @__PURE__ */ jsx(Label, {
@@ -5221,63 +5381,152 @@ const currencies = UNSAFE_withComponentProps(function Currencies() {
                 },
                 value: field.value,
                 children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                  className: "h-11",
                   children: /* @__PURE__ */ jsx(SelectValue, {
-                    placeholder: "Select from list"
+                    placeholder: "Select from world currencies"
                   })
                 }), /* @__PURE__ */ jsx(SelectContent, {
                   children: WORLD_CURRENCIES.map((c) => /* @__PURE__ */ jsxs(SelectItem, {
                     value: c.code,
-                    children: [c.code, " - ", c.name, " (", c.symbol, ")"]
+                    children: [c.code, " - ", c.name]
                   }, c.code))
                 })]
               })
             })]
           }), /* @__PURE__ */ jsx(DialogFooter, {
+            className: "pt-4",
             children: /* @__PURE__ */ jsx(Button, {
               type: "submit",
-              className: "hover-card-glow bg-orange-600 w-full",
-              children: editingId ? "Update" : "Save"
+              disabled: isSubmitting,
+              className: "bg-[#2196F3] w-full h-11 font-bold uppercase tracking-widest",
+              children: isSubmitting ? "Saving..." : "Save Currency"
             })
           })]
         })]
       })
-    }), /* @__PURE__ */ jsx("div", {
-      className: "grid gap-4 md:grid-cols-5 lg:grid-cols-5",
-      children: currencies2.map((cur) => /* @__PURE__ */ jsx(Card, {
-        className: "relative hover-card-glow hover:shadow-md transition-all",
-        children: /* @__PURE__ */ jsxs(CardContent, {
-          className: "p-5 flex items-center gap-4",
-          children: [/* @__PURE__ */ jsx("div", {
-            className: "h-10 w-10 bg-green-100 flex items-center justify-center rounded text-green-700 font-bold",
-            children: cur.symbol
-          }), /* @__PURE__ */ jsxs("div", {
-            children: [/* @__PURE__ */ jsx("h4", {
-              className: "font-bold",
-              children: cur.code
-            }), /* @__PURE__ */ jsx("p", {
-              className: "text-xs text-slate-500",
-              children: cur.name
-            })]
-          }), /* @__PURE__ */ jsx(Button, {
-            variant: "ghost",
-            size: "icon",
-            className: "absolute top-2 right-2",
-            onClick: () => handleEdit(cur),
-            children: /* @__PURE__ */ jsx(Pencil, {
-              className: "h-4 w-4"
+    }), /* @__PURE__ */ jsx(Card, {
+      className: "overflow-hidden border shadow-sm",
+      children: /* @__PURE__ */ jsxs(CardContent, {
+        className: "p-0",
+        children: [/* @__PURE__ */ jsxs(Table, {
+          children: [/* @__PURE__ */ jsx(TableHeader, {
+            children: /* @__PURE__ */ jsxs(TableRow, {
+              className: "bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 border-b",
+              children: [/* @__PURE__ */ jsx(TableHead, {
+                className: "font-bold text-slate-700 dark:text-slate-200",
+                children: "Code"
+              }), /* @__PURE__ */ jsx(TableHead, {
+                className: "font-bold text-slate-700 dark:text-slate-200",
+                children: "Name"
+              }), /* @__PURE__ */ jsx(TableHead, {
+                className: "font-bold text-slate-700 dark:text-slate-200",
+                children: "Abbreviation"
+              }), /* @__PURE__ */ jsx(TableHead, {
+                className: "font-bold text-slate-700 dark:text-slate-200",
+                children: "Symbol"
+              }), /* @__PURE__ */ jsx(TableHead, {
+                className: "font-bold text-slate-700 dark:text-slate-200",
+                children: "Status"
+              }), /* @__PURE__ */ jsx(TableHead, {
+                className: "font-bold text-slate-700 dark:text-slate-200 text-center",
+                children: "Action"
+              })]
             })
+          }), /* @__PURE__ */ jsx(TableBody, {
+            children: filteredData.length === 0 ? /* @__PURE__ */ jsx(TableRow, {
+              children: /* @__PURE__ */ jsx(TableCell, {
+                colSpan: 6,
+                className: "text-center h-32 text-slate-400 font-medium",
+                children: "No currencies found."
+              })
+            }) : filteredData.map((cur, index) => /* @__PURE__ */ jsxs(TableRow, {
+              className: "hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors",
+              children: [/* @__PURE__ */ jsxs(TableCell, {
+                className: "font-medium text-slate-600",
+                children: ["#", 1e3 + index]
+              }), /* @__PURE__ */ jsx(TableCell, {
+                className: "font-semibold text-slate-700 dark:text-slate-300",
+                children: cur.name
+              }), /* @__PURE__ */ jsx(TableCell, {
+                className: "font-bold text-slate-900 dark:text-white uppercase",
+                children: cur.code
+              }), /* @__PURE__ */ jsx(TableCell, {
+                className: "font-bold text-slate-900 dark:text-white",
+                children: cur.symbol
+              }), /* @__PURE__ */ jsx(TableCell, {
+                children: /* @__PURE__ */ jsx("span", {
+                  className: "text-green-600 dark:text-green-400 font-bold text-sm",
+                  children: "Active"
+                })
+              }), /* @__PURE__ */ jsx(TableCell, {
+                className: "text-center",
+                children: /* @__PURE__ */ jsx(Button, {
+                  variant: "ghost",
+                  size: "icon",
+                  className: "h-8 w-8 text-blue-500 hover:bg-blue-50 rounded-full",
+                  onClick: () => handleEdit(cur),
+                  children: /* @__PURE__ */ jsx(Pencil, {
+                    size: 16
+                  })
+                })
+              })]
+            }, cur._id))
           })]
-        })
-      }, cur._id))
+        }), /* @__PURE__ */ jsxs("div", {
+          className: "bg-slate-50/50 dark:bg-slate-800/30 p-4 border-t flex items-center justify-between",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "flex items-center gap-2",
+            children: [/* @__PURE__ */ jsxs(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-8 w-8 text-slate-400",
+              children: [/* @__PURE__ */ jsx(ChevronLeft, {
+                className: "h-4 w-4"
+              }), /* @__PURE__ */ jsx(ChevronLeft, {
+                className: "h-4 w-4 -ml-2"
+              })]
+            }), /* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-8 w-8 text-slate-400",
+              children: /* @__PURE__ */ jsx(ChevronLeft, {
+                className: "h-4 w-4"
+              })
+            }), /* @__PURE__ */ jsx("div", {
+              className: "h-8 w-8 bg-slate-200 dark:bg-slate-700 flex items-center justify-center rounded-full text-xs font-bold text-slate-700 dark:text-slate-200",
+              children: "1"
+            }), /* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-8 w-8 text-slate-400",
+              children: /* @__PURE__ */ jsx(ChevronRight, {
+                className: "h-4 w-4"
+              })
+            }), /* @__PURE__ */ jsxs(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-8 w-8 text-slate-400",
+              children: [/* @__PURE__ */ jsx(ChevronRight, {
+                className: "h-4 w-4"
+              }), /* @__PURE__ */ jsx(ChevronRight, {
+                className: "h-4 w-4 -ml-2"
+              })]
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "text-xs font-bold text-slate-500 uppercase tracking-wider",
+            children: ["1 - ", filteredData.length, " of ", filteredData.length, " items"]
+          })]
+        })]
+      })
     })]
   });
 });
 const route13 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: currencies,
-  meta: meta$f
+  meta: meta$j
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$e({}) {
+function meta$i({}) {
   return [{
     title: "Material Inward - ScaffRent"
   }];
@@ -5598,9 +5847,9 @@ const inventoryInward = UNSAFE_withComponentProps(function MaterialInward() {
 const route14 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: inventoryInward,
-  meta: meta$e
+  meta: meta$i
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$d({}) {
+function meta$h({}) {
   return [{
     title: "Material Outward - ScaffRent"
   }];
@@ -5928,17 +6177,17 @@ const inventoryOutward = UNSAFE_withComponentProps(function MaterialOutward() {
 const route15 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: inventoryOutward,
-  meta: meta$d
+  meta: meta$h
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$c({}) {
+function meta$g({}) {
   return [{
     title: "Inventory Operations - ScaffRent"
   }];
 }
 const txnSchema = z.object({
   date: z.string(),
-  reference: z.string().optional(),
-  remark: z.string().optional(),
+  reference: z.string().optional().or(z.literal("")),
+  remark: z.string().optional().or(z.literal("")),
   warehouse: z.string().min(1, "Select Warehouse")
 });
 function InventoryModule({
@@ -5951,16 +6200,18 @@ function InventoryModule({
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const isInward = type === "INWARD";
   const themeColor = isInward ? "text-orange-600" : "text-red-600";
-  const btnColor = isInward ? "bg-orange-600 hover:bg-orange-700" : "bg-red-600 hover:bg-red-700";
-  const borderColor = isInward ? "border-orange-200" : "border-red-200";
-  const badgeColor = isInward ? "bg-orange-100 text-orange-800" : "bg-red-100 text-red-800";
   const {
     register: register2,
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: {
       errors
     }
@@ -5977,40 +6228,60 @@ function InventoryModule({
     setIsLoading(true);
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`/api/inventory?type=${type}&page=${pageNum}&limit=5`, {
+      const res = await fetch(`/api/inventory?type=${type}&page=${pageNum}&limit=7`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
       });
       if (res.ok) {
         const data = await res.json();
-        setHistory(data.transactions);
-        setTotalPages(data.pagination.totalPages);
-        setPage(data.pagination.currentPage);
+        setHistory(data.transactions || []);
+        setTotalPages(data.pagination?.totalPages || 1);
+        setPage(data.pagination?.currentPage || 1);
       }
     } catch (e) {
-      console.error("History fetch error");
+      console.error(e);
     }
     setIsLoading(false);
   }, [type]);
   useEffect(() => {
     fetchHistory(1);
   }, [fetchHistory]);
-  const addRow = () => {
-    setRows([...rows, {
-      itemId: "",
-      itemCode: "",
-      itemName: "",
-      unit: "",
-      quantity: 0,
-      rate: 0,
-      amount: 0
-    }]);
+  const handleAdd = () => {
+    setEditingId(null);
+    setViewMode(false);
+    setRows([]);
+    reset({
+      date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
+      reference: "",
+      remark: "",
+      warehouse: ""
+    });
+    setOpen(true);
   };
-  const removeRow = (index) => {
-    const updated = [...rows];
-    updated.splice(index, 1);
-    setRows(updated);
+  const handleEdit = (txn) => {
+    setEditingId(txn._id);
+    setViewMode(false);
+    reset({
+      date: txn.date.split("T")[0],
+      reference: txn.reference,
+      remark: txn.remark,
+      warehouse: txn.warehouse?._id || txn.warehouse
+    });
+    setRows(txn.items.map((i) => ({
+      itemId: i.item,
+      itemCode: i.itemCode,
+      itemName: i.itemName,
+      unit: i.unit,
+      quantity: i.quantity,
+      rate: i.rate,
+      amount: i.amount
+    })));
+    setOpen(true);
+  };
+  const handleView = (txn) => {
+    handleEdit(txn);
+    setViewMode(true);
   };
   const handleItemCodeChange = (index, code) => {
     const updated = [...rows];
@@ -6024,341 +6295,356 @@ function InventoryModule({
       updated[index].amount = updated[index].quantity * updated[index].rate;
     } else {
       updated[index].itemId = "";
-      updated[index].itemName = "Item not found";
+      updated[index].itemName = "Not found";
     }
-    setRows(updated);
-  };
-  const handleCalcChange = (index, field, value) => {
-    const val = parseFloat(value) || 0;
-    const updated = [...rows];
-    updated[index][field] = val;
-    updated[index].amount = updated[index].quantity * updated[index].rate;
     setRows(updated);
   };
   const onSubmit = async (data) => {
-    if (rows.length === 0 || rows.some((r) => !r.itemId)) {
-      toast.error("Please add valid items to the grid");
-      return;
-    }
-    const payload = {
-      txnType: type,
-      ...data,
-      items: rows.map((r) => ({
-        item: r.itemId,
-        itemCode: r.itemCode,
-        itemName: r.itemName,
-        unit: r.unit,
-        quantity: r.quantity,
-        rate: r.rate,
-        amount: r.amount
-      }))
-    };
+    if (rows.length === 0 || rows.some((r) => !r.itemId)) return toast.error("Check item rows");
     const token = localStorage.getItem("token");
-    try {
-      const res = await fetch("/api/inventory", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const saved = await res.json();
-        toast.success(`Doc ${saved.docNo} Saved!`);
-        reset();
-        setRows([]);
-        fetchHistory(1);
-      } else {
-        const err = await res.json();
-        toast.error(err.message || "Failed to save");
-      }
-    } catch (e) {
-      toast.error("Server Error");
+    const url = editingId ? `/api/inventory/${editingId}` : "/api/inventory";
+    const method = editingId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        ...data,
+        txnType: type,
+        items: rows.map((r) => ({
+          ...r,
+          item: r.itemId
+        }))
+      })
+    });
+    if (res.ok) {
+      toast.success("Saved Successfully");
+      setOpen(false);
+      fetchHistory(1);
+    } else {
+      const err = await res.json();
+      toast.error(err.message || "Failed");
     }
   };
   return /* @__PURE__ */ jsxs("div", {
-    className: "space-y-8",
-    children: [/* @__PURE__ */ jsxs("form", {
-      onSubmit: handleSubmit(onSubmit),
-      className: "space-y-6 pt-4 animate-in fade-in slide-in-from-bottom-4",
-      children: [/* @__PURE__ */ jsxs(Card, {
-        className: `hover-card-glow border-t-4 ${borderColor}`,
-        children: [/* @__PURE__ */ jsx(CardHeader, {
-          children: /* @__PURE__ */ jsxs(CardTitle, {
-            className: `text-base flex items-center gap-2 ${themeColor}`,
-            children: [isInward ? /* @__PURE__ */ jsx(ArrowDownCircle, {
-              size: 20
-            }) : /* @__PURE__ */ jsx(ArrowUpCircle, {
-              size: 20
-            }), isInward ? "New Material Inward" : "New Material Outward"]
-          })
-        }), /* @__PURE__ */ jsxs(CardContent, {
-          className: "grid grid-cols-1 md:grid-cols-4 gap-4",
-          children: [/* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Date"
-            }), /* @__PURE__ */ jsx(Input, {
-              type: "date",
-              ...register2("date")
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: isInward ? "To Warehouse" : "From Warehouse"
-            }), /* @__PURE__ */ jsx(Controller, {
-              name: "warehouse",
-              control,
-              render: ({
-                field
-              }) => /* @__PURE__ */ jsxs(Select, {
-                onValueChange: field.onChange,
-                value: field.value,
-                children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                  children: /* @__PURE__ */ jsx(SelectValue, {
-                    placeholder: "Select"
-                  })
-                }), /* @__PURE__ */ jsx(SelectContent, {
-                  children: warehouses2.map((w) => /* @__PURE__ */ jsx(SelectItem, {
-                    value: w._id,
-                    children: w.name
-                  }, w._id))
-                })]
-              })
-            }), errors.warehouse && /* @__PURE__ */ jsx("span", {
-              className: "text-red-500 text-xs",
-              children: "Required"
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Reference"
-            }), /* @__PURE__ */ jsx(Input, {
-              ...register2("reference"),
-              placeholder: "Ref / Bill No"
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Remark"
-            }), /* @__PURE__ */ jsx(Textarea, {
-              ...register2("remark"),
-              placeholder: "Notes...",
-              className: "h-10 min-h-[40px]"
-            })]
-          })]
-        })]
-      }), /* @__PURE__ */ jsx(Card, {
-        className: "hover-card-glow",
-        children: /* @__PURE__ */ jsxs(CardContent, {
-          className: "p-0",
-          children: [/* @__PURE__ */ jsx("div", {
-            className: "overflow-x-auto",
-            children: /* @__PURE__ */ jsxs(Table, {
-              className: "min-w-[800px]",
-              children: [/* @__PURE__ */ jsx(TableHeader, {
-                children: /* @__PURE__ */ jsxs(TableRow, {
-                  className: "bg-slate-50",
-                  children: [/* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[150px]",
-                    children: "Code"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    children: "Item Name"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[100px]",
-                    children: "Unit"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[120px]",
-                    children: "Qty"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[120px]",
-                    children: "Rate"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[120px]",
-                    children: "Amount"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[50px]"
-                  })]
-                })
-              }), /* @__PURE__ */ jsx(TableBody, {
-                children: rows.map((row, index) => /* @__PURE__ */ jsxs(TableRow, {
-                  children: [/* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsxs("div", {
-                      className: "relative",
-                      children: [/* @__PURE__ */ jsx(Input, {
-                        value: row.itemCode,
-                        onChange: (e) => handleItemCodeChange(index, e.target.value),
-                        placeholder: "Code",
-                        className: "uppercase"
-                      }), /* @__PURE__ */ jsx(Search, {
-                        className: "absolute right-2 top-2.5 h-4 w-4 text-slate-400"
-                      })]
-                    })
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "text-sm font-medium text-slate-700",
-                    children: row.itemName || "-"
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "text-sm text-slate-500",
-                    children: row.unit || "-"
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Input, {
-                      type: "number",
-                      value: row.quantity,
-                      onChange: (e) => handleCalcChange(index, "quantity", e.target.value)
-                    })
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Input, {
-                      type: "number",
-                      value: row.rate,
-                      onChange: (e) => handleCalcChange(index, "rate", e.target.value)
-                    })
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Input, {
-                      value: row.amount,
-                      disabled: true,
-                      className: "bg-slate-50 font-bold"
-                    })
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Button, {
-                      type: "button",
-                      variant: "ghost",
-                      size: "icon",
-                      onClick: () => removeRow(index),
-                      children: /* @__PURE__ */ jsx(Trash2, {
-                        className: "h-4 w-4 text-red-500"
-                      })
-                    })
-                  })]
-                }, index))
-              })]
-            })
-          }), /* @__PURE__ */ jsx("div", {
-            className: "p-4 bg-slate-50 border-t flex justify-center",
-            children: /* @__PURE__ */ jsxs(Button, {
-              type: "button",
-              variant: "outline",
-              onClick: addRow,
-              className: "border-dashed border-slate-400 text-slate-600",
-              children: [/* @__PURE__ */ jsx(Plus, {
-                className: "mr-2 h-4 w-4"
-              }), " Add Item"]
-            })
-          })]
-        })
+    className: "space-y-6",
+    children: [/* @__PURE__ */ jsxs("div", {
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
+      children: [/* @__PURE__ */ jsx("h2", {
+        className: cn("text-xl font-bold uppercase tracking-tight", themeColor),
+        children: isInward ? "Material Inward" : "Material Outward"
       }), /* @__PURE__ */ jsxs("div", {
-        className: "flex justify-end gap-4",
-        children: [/* @__PURE__ */ jsx(Button, {
-          type: "button",
-          className: "hover-card-glow",
-          onClick: () => reset(),
-          children: "Reset"
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search Document...",
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none"
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 border",
+          onClick: () => fetchHistory(1),
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
         }), /* @__PURE__ */ jsxs(Button, {
-          type: "submit",
-          className: `hover-card-glow w-40 ${btnColor}`,
-          children: [/* @__PURE__ */ jsx(Save, {
+          onClick: handleAdd,
+          className: cn("text-white h-10 px-6 font-bold shadow-md", isInward ? "bg-orange-600 hover:bg-orange-700" : "bg-red-600 hover:bg-red-700"),
+          children: [/* @__PURE__ */ jsx(Plus, {
             className: "mr-2 h-4 w-4"
-          }), " Save"]
+          }), " Add"]
         })]
       })]
-    }), /* @__PURE__ */ jsxs(Card, {
-      className: "hover-card-glow",
-      children: [/* @__PURE__ */ jsxs(CardHeader, {
-        children: [/* @__PURE__ */ jsxs(CardTitle, {
-          className: "text-lg flex items-center gap-2",
-          children: [/* @__PURE__ */ jsx(Clock, {
-            className: "h-5 w-5 text-slate-500"
-          }), " Recent Transactions"]
-        }), /* @__PURE__ */ jsxs(CardDescription, {
-          children: ["History of ", isInward ? "inward" : "outward", " movements."]
-        })]
-      }), /* @__PURE__ */ jsxs(CardContent, {
-        children: [/* @__PURE__ */ jsx("div", {
-          className: "rounded-md border overflow-x-auto",
-          children: /* @__PURE__ */ jsxs(Table, {
-            children: [/* @__PURE__ */ jsx(TableHeader, {
-              children: /* @__PURE__ */ jsxs(TableRow, {
-                className: "bg-slate-50",
-                children: [/* @__PURE__ */ jsx(TableHead, {
-                  children: "Doc No"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  children: "Fiscal Year"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  children: "Date"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  children: "Warehouse"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  children: "Reference"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  className: "text-right",
-                  children: "Total Qty"
-                })]
-              })
-            }), /* @__PURE__ */ jsx(TableBody, {
-              children: isLoading ? /* @__PURE__ */ jsx(TableRow, {
-                children: /* @__PURE__ */ jsx(TableCell, {
-                  colSpan: 6,
-                  className: "text-center h-24",
-                  children: "Loading..."
-                })
-              }) : history.length === 0 ? /* @__PURE__ */ jsx(TableRow, {
-                children: /* @__PURE__ */ jsx(TableCell, {
-                  colSpan: 6,
-                  className: "text-center h-24 text-slate-500",
-                  children: "No recent transactions found."
-                })
-              }) : history.map((txn) => /* @__PURE__ */ jsxs(TableRow, {
-                children: [/* @__PURE__ */ jsx(TableCell, {
-                  className: "font-mono font-medium",
-                  children: /* @__PURE__ */ jsx(Badge, {
-                    variant: "outline",
-                    className: badgeColor,
-                    children: txn.docNo
-                  })
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  children: /* @__PURE__ */ jsx(Badge, {
-                    variant: "secondary",
-                    className: "font-mono text-xs",
-                    children: txn.fiscalYear?.code || "N/A"
-                  })
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  children: new Date(txn.date).toLocaleDateString()
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  children: txn.warehouse?.name || "Unknown"
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  className: "text-slate-500 text-sm",
-                  children: txn.reference || "-"
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  className: "text-right font-medium",
-                  children: txn.items?.reduce((sum, i) => sum + (i.quantity || 0), 0)
-                })]
-              }, txn._id))
-            })]
+    }), /* @__PURE__ */ jsx(Dialog, {
+      open,
+      onOpenChange: setOpen,
+      children: /* @__PURE__ */ jsxs(DialogContent, {
+        className: "sm:max-w-[1000px] max-h-[90vh] overflow-y-auto",
+        children: [/* @__PURE__ */ jsx(DialogHeader, {
+          children: /* @__PURE__ */ jsx(DialogTitle, {
+            children: viewMode ? "Document View" : editingId ? "Edit Transaction" : "New Entry"
           })
-        }), /* @__PURE__ */ jsxs("div", {
-          className: "flex items-center justify-between mt-4",
-          children: [/* @__PURE__ */ jsxs("div", {
-            className: "text-xs text-slate-500",
-            children: ["Page ", page, " of ", totalPages]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "flex gap-2",
-            children: [/* @__PURE__ */ jsxs(Button, {
-              variant: "outline",
-              size: "sm",
-              onClick: () => fetchHistory(page - 1),
-              disabled: page <= 1 || isLoading,
-              children: [/* @__PURE__ */ jsx(ChevronLeft, {
-                className: "h-4 w-4"
-              }), " Prev"]
-            }), /* @__PURE__ */ jsxs(Button, {
-              variant: "outline",
-              size: "sm",
-              onClick: () => fetchHistory(page + 1),
-              disabled: page >= totalPages || isLoading,
-              children: ["Next ", /* @__PURE__ */ jsx(ChevronRight, {
-                className: "h-4 w-4"
+        }), /* @__PURE__ */ jsxs("form", {
+          onSubmit: handleSubmit(onSubmit),
+          className: "space-y-6 py-2",
+          children: [/* @__PURE__ */ jsxs("fieldset", {
+            disabled: viewMode,
+            className: "space-y-6",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Date"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "date",
+                  ...register2("date")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Warehouse"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "warehouse",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: warehouses2.map((w) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: w._id,
+                        children: w.name
+                      }, w._id))
+                    })]
+                  }, warehouses2.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Reference"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("reference")
+                })]
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "border rounded-md overflow-hidden",
+              children: [/* @__PURE__ */ jsxs(Table, {
+                children: [/* @__PURE__ */ jsx(TableHeader, {
+                  children: /* @__PURE__ */ jsxs(TableRow, {
+                    className: "bg-slate-100 dark:bg-slate-800",
+                    children: [/* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[150px]",
+                      children: "Code"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Item Name"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[100px]",
+                      children: "Qty"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[120px]",
+                      children: "Rate"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[120px] text-right",
+                      children: "Amount"
+                    }), !viewMode && /* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[40px]"
+                    })]
+                  })
+                }), /* @__PURE__ */ jsx(TableBody, {
+                  children: rows.map((row, index) => /* @__PURE__ */ jsxs(TableRow, {
+                    children: [/* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        value: row.itemCode,
+                        onChange: (e) => handleItemCodeChange(index, e.target.value),
+                        placeholder: "Type Code",
+                        className: "uppercase h-8"
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      className: "text-sm font-medium",
+                      children: row.itemName
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        value: row.quantity,
+                        onChange: (e) => {
+                          const n = [...rows];
+                          n[index].quantity = Number(e.target.value);
+                          n[index].amount = n[index].quantity * n[index].rate;
+                          setRows(n);
+                        },
+                        className: "h-8"
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        value: row.rate,
+                        onChange: (e) => {
+                          const n = [...rows];
+                          n[index].rate = Number(e.target.value);
+                          n[index].amount = n[index].quantity * n[index].rate;
+                          setRows(n);
+                        },
+                        className: "h-8"
+                      })
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right font-bold text-primary",
+                      children: ["₹", row.amount.toFixed(2)]
+                    }), !viewMode && /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Button, {
+                        variant: "ghost",
+                        size: "icon",
+                        onClick: () => {
+                          const n = [...rows];
+                          n.splice(index, 1);
+                          setRows(n);
+                        },
+                        children: /* @__PURE__ */ jsx(Trash2, {
+                          className: "h-4 w-4 text-red-500"
+                        })
+                      })
+                    })]
+                  }, index))
+                })]
+              }), !viewMode && /* @__PURE__ */ jsx("div", {
+                className: "p-3 flex justify-center border-t bg-slate-50/50",
+                children: /* @__PURE__ */ jsxs(Button, {
+                  type: "button",
+                  variant: "outline",
+                  size: "sm",
+                  onClick: () => setRows([...rows, {
+                    itemId: "",
+                    itemCode: "",
+                    itemName: "",
+                    unit: "",
+                    quantity: 1,
+                    rate: 0,
+                    amount: 0
+                  }]),
+                  className: "border-dashed border-primary text-primary",
+                  children: [/* @__PURE__ */ jsx(Plus, {
+                    size: 14,
+                    className: "mr-1"
+                  }), " Add Item"]
+                })
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "space-y-1",
+              children: [/* @__PURE__ */ jsx(Label, {
+                children: "Remark"
+              }), /* @__PURE__ */ jsx(Textarea, {
+                ...register2("remark"),
+                className: "h-16"
               })]
             })]
+          }), !viewMode && /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            className: cn("w-full h-12 text-lg font-bold shadow-lg uppercase", isInward ? "bg-orange-600" : "bg-red-600"),
+            children: "Save Document"
+          })]
+        })]
+      })
+    }), /* @__PURE__ */ jsx("div", {
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+      children: history.map((txn) => /* @__PURE__ */ jsx(Card, {
+        className: "overflow-hidden border shadow-sm hover-card-glow transition-all duration-300 group bg-white dark:bg-slate-900",
+        children: /* @__PURE__ */ jsxs(CardContent, {
+          className: "p-0",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: cn("p-4 flex justify-between items-center border-b", isInward ? "bg-orange-50/50 dark:bg-orange-900/10" : "bg-red-50/50 dark:bg-red-900/10"),
+            children: [/* @__PURE__ */ jsx("span", {
+              className: cn("font-black text-sm tracking-tight", isInward ? "text-orange-700" : "text-red-700"),
+              children: txn.docNo
+            }), /* @__PURE__ */ jsx("span", {
+              className: "text-[11px] font-bold text-slate-500",
+              children: format(new Date(txn.date), "dd-MMM-yyyy")
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "p-5 space-y-3 text-sm",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Warehouse:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-800 dark:text-slate-200 text-right truncate flex-1",
+                children: txn.warehouse?.name || "N/A"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "FY Code:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-600 dark:text-slate-400 text-right uppercase",
+                children: txn.fiscalYear?.code || "-"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Reference:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-primary truncate max-w-[100px]",
+                children: txn.reference || "None"
+              })]
+            }), /* @__PURE__ */ jsx(Separator, {
+              className: "opacity-50"
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1 text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-900 dark:text-white font-black uppercase",
+                children: "Total Items:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-primary",
+                children: txn.items?.reduce((s, i) => s + i.quantity, 0)
+              })]
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              onClick: () => handleView(txn),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Eye, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleEdit(txn),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-blue-500 hover:bg-blue-50 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => toast.info("Downloading..."),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(CloudDownload, {
+                size: 18
+              })
+            })]
+          })]
+        })
+      }, txn._id))
+    }), /* @__PURE__ */ jsxs("div", {
+      className: "flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-lg border shadow-sm",
+      children: [/* @__PURE__ */ jsxs("div", {
+        className: "text-xs text-slate-500 italic",
+        children: ["Showing page ", page, " of ", totalPages]
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex gap-2",
+        children: [/* @__PURE__ */ jsx(Button, {
+          variant: "outline",
+          size: "sm",
+          onClick: () => fetchHistory(page - 1),
+          disabled: page <= 1 || isLoading,
+          className: "h-8",
+          children: /* @__PURE__ */ jsx(ChevronLeft, {
+            className: "h-4 w-4"
+          })
+        }), /* @__PURE__ */ jsxs(Button, {
+          variant: "outline",
+          size: "sm",
+          onClick: () => fetchHistory(page + 1),
+          disabled: page >= totalPages || isLoading,
+          className: "h-8",
+          children: ["Next ", /* @__PURE__ */ jsx(ChevronRight, {
+            className: "h-4 w-4"
           })]
         })]
       })]
@@ -6371,53 +6657,46 @@ const inventory = UNSAFE_withComponentProps(function InventoryPage() {
   useEffect(() => {
     const fetchMasters = async () => {
       const token = localStorage.getItem("token");
-      const headers = {
+      const h = {
         "Authorization": `Bearer ${token}`
       };
       try {
         const [whRes, itemRes] = await Promise.all([fetch("/api/masters/warehouses", {
-          headers
+          headers: h
         }), fetch("/api/masters/items", {
-          headers
+          headers: h
         })]);
         if (whRes.ok) setWarehouses(await whRes.json());
         if (itemRes.ok) setItems(await itemRes.json());
       } catch (e) {
-        toast.error("Network Error: Could not fetch masters");
+        toast.error("Master Load Error");
       }
     };
     fetchMasters();
   }, []);
   return /* @__PURE__ */ jsxs("div", {
     className: "space-y-6",
-    children: [/* @__PURE__ */ jsx("div", {
-      className: "flex flex-col md:flex-row md:items-center justify-between gap-4",
-      children: /* @__PURE__ */ jsxs("div", {
-        children: [/* @__PURE__ */ jsx("h2", {
-          className: "text-2xl font-bold tracking-tight",
-          children: "Inventory Operations"
-        }), /* @__PURE__ */ jsx("p", {
-          className: "text-muted-foreground",
-          children: "Manage material flow in and out of warehouses."
-        })]
-      })
+    children: [/* @__PURE__ */ jsxs("div", {
+      children: [/* @__PURE__ */ jsx("h2", {
+        className: "text-3xl font-black tracking-tight text-slate-900 dark:text-white",
+        children: "Inventory Management"
+      }), /* @__PURE__ */ jsx("p", {
+        className: "text-slate-500 text-sm",
+        children: "Monitor material movements across your logistics network."
+      })]
     }), /* @__PURE__ */ jsxs(Tabs, {
       defaultValue: "inward",
       className: "w-full",
       children: [/* @__PURE__ */ jsxs(TabsList, {
-        className: "grid w-full grid-cols-2 h-12 bg-slate-100 rounded-md border border-slate-200 mb-4 max-w-md",
-        children: [/* @__PURE__ */ jsxs(TabsTrigger, {
+        className: "grid w-full grid-cols-2 h-12 bg-slate-100 dark:bg-slate-900 rounded-lg p-1 max-w-md",
+        children: [/* @__PURE__ */ jsx(TabsTrigger, {
           value: "inward",
-          className: "data-[state=active]:bg-orange-100 data-[state=active]:text-orange-800 text-base",
-          children: [/* @__PURE__ */ jsx(ArrowDownCircle, {
-            className: "mr-2 h-5 w-5"
-          }), " Material Inward"]
-        }), /* @__PURE__ */ jsxs(TabsTrigger, {
+          className: "data-[state=active]:bg-orange-600 data-[state=active]:text-white font-bold uppercase text-xs tracking-widest",
+          children: "Inward Entry"
+        }), /* @__PURE__ */ jsx(TabsTrigger, {
           value: "outward",
-          className: "data-[state=active]:bg-red-100 data-[state=active]:text-red-800 text-base",
-          children: [/* @__PURE__ */ jsx(ArrowUpCircle, {
-            className: "mr-2 h-5 w-5"
-          }), " Material Outward"]
+          className: "data-[state=active]:bg-red-600 data-[state=active]:text-white font-bold uppercase text-xs tracking-widest",
+          children: "Outward Entry"
         })]
       }), /* @__PURE__ */ jsx(TabsContent, {
         value: "inward",
@@ -6440,7 +6719,7 @@ const inventory = UNSAFE_withComponentProps(function InventoryPage() {
 const route16 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: inventory,
-  meta: meta$c
+  meta: meta$g
 }, Symbol.toStringTag, { value: "Module" }));
 function Calendar({
   className,
@@ -6530,7 +6809,7 @@ function getIndianFinancialYear(date = /* @__PURE__ */ new Date()) {
     // March 31st
   };
 }
-function meta$b({}) {
+function meta$f({}) {
   return [{
     title: "Fiscal Years - ScaffRent"
   }];
@@ -6779,9 +7058,9 @@ const fiscalYears = UNSAFE_withComponentProps(function FiscalYears() {
 const route17 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: fiscalYears,
-  meta: meta$b
+  meta: meta$f
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$a({}) {
+function meta$e({}) {
   return [{
     title: "Tax Codes - ScaffRent"
   }];
@@ -6973,9 +7252,9 @@ const taxCodes = UNSAFE_withComponentProps(function TaxCodes() {
 const route18 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: taxCodes,
-  meta: meta$a
+  meta: meta$e
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$9({}) {
+function meta$d({}) {
   return [{
     title: "Sales Orders - ScaffRent"
   }];
@@ -6991,23 +7270,24 @@ const salesSchema = z.object({
   transportCharges: z.coerce.number().min(0),
   loadingCharges: z.coerce.number().min(0)
 });
-function SalesForm({
+function SalesOrdersContainer({
   type
 }) {
   const isRental = type === "RENTAL";
   const [rows, setRows] = useState([]);
-  const [terms, setTerms] = useState([""]);
+  const [history, setHistory] = useState([]);
   const [customers2, setCustomers] = useState([]);
   const [sites2, setSites] = useState([]);
   const [items2, setItems] = useState([]);
   const [taxCodes2, setTaxCodes] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [filteredSites, setFilteredSites] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const {
     register: register2,
     control,
@@ -7035,151 +7315,147 @@ function SalesForm({
   const watchCustId = watch("customer");
   const watchSiteId = watch("site");
   const watchCharges = watch(["transportCharges", "loadingCharges", "taxCode"]);
-  useEffect(() => {
-    const fetchAll = async () => {
-      const token = localStorage.getItem("token");
-      const h = {
-        "Authorization": `Bearer ${token}`
-      };
-      try {
-        const [c, s, i, t] = await Promise.all([fetch("/api/masters/customers", {
-          headers: h
-        }).then((r) => r.json()), fetch("/api/sites", {
-          headers: h
-        }).then((r) => r.json()), fetch("/api/masters/items", {
-          headers: h
-        }).then((r) => r.json()), fetch("/api/masters/tax-codes", {
-          headers: h
-        }).then((r) => r.json())]);
-        setCustomers(Array.isArray(c) ? c : []);
-        setSites(Array.isArray(s) ? s : []);
-        setItems(Array.isArray(i) ? i : []);
-        setTaxCodes(Array.isArray(t) ? t : []);
-      } catch (e) {
-        console.error("Master fetch error", e);
-      }
+  const fetchMasters = async () => {
+    const token = localStorage.getItem("token");
+    const h = {
+      "Authorization": `Bearer ${token}`
     };
-    fetchAll();
-  }, []);
-  const fetchHistory = useCallback(async (pageNum) => {
-    setIsLoadingHistory(true);
+    try {
+      const [c, s, i, t] = await Promise.all([fetch("/api/masters/customers", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/sites", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/items", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/tax-codes", {
+        headers: h
+      }).then((r) => r.json())]);
+      setCustomers(Array.isArray(c) ? c : []);
+      setSites(Array.isArray(s) ? s : []);
+      setItems(Array.isArray(i) ? i : []);
+      setTaxCodes(Array.isArray(t) ? t : []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  const fetchHistory = useCallback(async (p) => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`/api/sales?type=${type}&page=${pageNum}&limit=7`, {
+      const res = await fetch(`/api/sales?type=${type}&page=${p}&limit=8`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
       });
       if (res.ok) {
-        const data = await res.json();
-        setHistory(data.orders);
-        setTotalPages(data.pagination.totalPages);
-        setPage(data.pagination.currentPage);
+        const d = await res.json();
+        setHistory(d.orders || []);
+        setTotalPages(d.pagination?.totalPages || 1);
+        setPage(d.pagination?.currentPage || 1);
       }
     } catch (e) {
-      console.error("History error", e);
+      console.error(e);
     }
-    setIsLoadingHistory(false);
   }, [type]);
   useEffect(() => {
+    fetchMasters();
     fetchHistory(1);
   }, [fetchHistory]);
   useEffect(() => {
     if (watchCustId) {
       const cust = customers2.find((c) => c._id === watchCustId);
       setSelectedCustomer(cust);
-      const relSites = sites2.filter((s) => s.customer?._id === watchCustId);
-      setFilteredSites(relSites);
-    } else {
-      setSelectedCustomer(null);
-      setFilteredSites([]);
+      setFilteredSites(sites2.filter((s) => s.customer?._id === watchCustId));
     }
   }, [watchCustId, customers2, sites2]);
   useEffect(() => {
-    if (watchSiteId) {
-      const site = sites2.find((s) => s._id === watchSiteId);
-      setSelectedSite(site);
-    } else {
-      setSelectedSite(null);
-    }
+    if (watchSiteId) setSelectedSite(sites2.find((s) => s._id === watchSiteId));
   }, [watchSiteId, sites2]);
+  const handleAdd = () => {
+    setEditingId(null);
+    setViewMode(false);
+    setRows([]);
+    reset({
+      date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
+      customer: "",
+      site: "",
+      referenceNo: "",
+      currencyRate: 1,
+      duration: 0,
+      taxCode: "",
+      transportCharges: 0,
+      loadingCharges: 0
+    });
+    setOpen(true);
+  };
+  const handleEdit = (order) => {
+    setEditingId(order._id);
+    setViewMode(false);
+    reset({
+      date: order.date.split("T")[0],
+      customer: order.customer?._id,
+      site: order.site?._id,
+      referenceNo: order.referenceNo,
+      currencyRate: order.currencyRate,
+      duration: order.duration,
+      transportCharges: order.transportCharges,
+      loadingCharges: order.loadingCharges,
+      taxCode: order.taxCode
+    });
+    setRows(order.items);
+    setOpen(true);
+  };
+  const handleView = (order) => {
+    handleEdit(order);
+    setViewMode(true);
+  };
+  const handleDownload = (order) => {
+    toast.info(`Downloading Order ${order.docNo}`);
+    window.print();
+  };
   const addRow = () => setRows([...rows, {
     itemId: "",
     itemName: "",
     unit: "",
     quantity: 1,
     rate: 0,
-    amount: 0,
-    remark: ""
+    amount: 0
   }]);
-  const removeRow = (i) => {
+  const handleItemChange = (idx, id) => {
+    const itm = items2.find((i) => i._id === id);
     const n = [...rows];
-    n.splice(i, 1);
-    setRows(n);
-  };
-  const handleItemChange = (index, itemId) => {
-    const item = items2.find((i) => i._id === itemId);
-    const updated = [...rows];
-    updated[index].itemId = itemId;
-    if (item) {
-      updated[index].itemName = item.name;
-      updated[index].unit = item.unit;
-      updated[index].rate = isRental ? item.monthlyRentRate || 0 : item.sellRate || 0;
-      updated[index].amount = updated[index].quantity * updated[index].rate;
+    if (itm) {
+      n[idx] = {
+        ...n[idx],
+        itemId: id,
+        itemName: itm.name,
+        unit: itm.unit,
+        rate: isRental ? itm.monthlyRentRate : itm.sellRate,
+        amount: (isRental ? itm.monthlyRentRate : itm.sellRate) * n[idx].quantity
+      };
+      setRows(n);
     }
-    setRows(updated);
   };
-  const handleCalc = (index, field, val) => {
-    const n = [...rows];
-    n[index][field] = field === "remark" ? val : parseFloat(val) || 0;
-    if (field !== "remark") n[index].amount = n[index].quantity * n[index].rate;
-    setRows(n);
-  };
-  const subTotal = rows.reduce((acc, r) => acc + r.amount, 0);
-  const transport = Number(watchCharges[0] || 0);
-  const loading = Number(watchCharges[1] || 0);
-  const taxableAmount = subTotal + transport + loading;
-  const selectedTaxId = String(watchCharges[2] || "");
-  const selectedTax = taxCodes2.find((t) => t._id === selectedTaxId);
-  const taxRate = selectedTax ? selectedTax.totalRate : 0;
-  const taxAmount = taxableAmount * (taxRate / 100);
-  const grandTotal = taxableAmount + taxAmount;
-  const addTerm = () => setTerms([...terms, ""]);
-  const updateTerm = (i, val) => {
-    const n = [...terms];
-    n[i] = val;
-    setTerms(n);
-  };
-  const removeTerm = (i) => {
-    const n = [...terms];
-    n.splice(i, 1);
-    setTerms(n);
-  };
+  const subTotal = rows.reduce((acc, r) => acc + (r.amount || 0), 0);
+  const tax = taxCodes2.find((t) => t._id === watchCharges[2]);
+  const taxAmount = (subTotal + Number(watchCharges[0] || 0) + Number(watchCharges[1] || 0)) * ((tax?.totalRate || 0) / 100);
+  const total = subTotal + Number(watchCharges[0] || 0) + Number(watchCharges[1] || 0) + taxAmount;
   const onSubmit = async (data) => {
-    if (rows.length === 0) return toast.error("Add at least one item");
-    if (!data.site) return toast.error("Select Site / Project");
     const payload = {
-      orderType: type,
       ...data,
+      orderType: type,
       items: rows.map((r) => ({
-        item: r.itemId,
-        itemName: r.itemName,
-        unit: r.unit,
-        quantity: r.quantity,
-        rate: r.rate,
-        amount: r.amount,
-        remark: r.remark
+        ...r,
+        item: r.itemId || r.item
       })),
       subTotal,
       taxAmount,
-      grandTotal,
-      terms: terms.filter((t) => t.trim() !== ""),
-      billingAddress: selectedCustomer?.billingAddress,
-      siteAddress: selectedSite?.address
+      grandTotal: total
     };
     const token = localStorage.getItem("token");
-    const res = await fetch("/api/sales", {
-      method: "POST",
+    const url = editingId ? `/api/sales/${editingId}` : "/api/sales";
+    const method = editingId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
@@ -7187,483 +7463,340 @@ function SalesForm({
       body: JSON.stringify(payload)
     });
     if (res.ok) {
-      toast.success(`Sales Order Created!`);
-      reset();
-      setRows([]);
-      setTerms([""]);
-      setSelectedSite(null);
+      toast.success("Saved!");
+      setOpen(false);
       fetchHistory(1);
-    } else {
-      toast.error("Failed to create order");
     }
   };
+  const fmt = (v) => new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR"
+  }).format(v);
   return /* @__PURE__ */ jsxs("div", {
-    className: "space-y-8",
-    children: [/* @__PURE__ */ jsxs("form", {
-      onSubmit: handleSubmit(onSubmit),
-      className: "space-y-6 pt-4 animate-in fade-in duration-300",
-      children: [/* @__PURE__ */ jsxs(Card, {
-        className: "hover-card-glow border-t-4 border-t-primary",
-        children: [/* @__PURE__ */ jsx(CardHeader, {
-          children: /* @__PURE__ */ jsx(CardTitle, {
-            className: "text-base",
-            children: "Order Header"
+    className: "space-y-6",
+    children: [/* @__PURE__ */ jsxs("div", {
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
+      children: [/* @__PURE__ */ jsxs("h2", {
+        className: "text-xl font-bold text-slate-800 dark:text-white uppercase tracking-tight",
+        children: [type, " Orders"]
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search Orders...",
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none"
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 border",
+          onClick: () => fetchHistory(1),
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
           })
-        }), /* @__PURE__ */ jsxs(CardContent, {
-          className: "grid grid-cols-1 md:grid-cols-4 gap-4",
-          children: [/* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Order Date"
-            }), /* @__PURE__ */ jsx(Input, {
-              type: "date",
-              ...register2("date")
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Customer"
-            }), /* @__PURE__ */ jsx(Controller, {
-              name: "customer",
-              control,
-              render: ({
-                field
-              }) => /* @__PURE__ */ jsxs(Select, {
-                onValueChange: field.onChange,
-                value: field.value,
-                children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                  children: /* @__PURE__ */ jsx(SelectValue, {
-                    placeholder: "Select Customer"
-                  })
-                }), /* @__PURE__ */ jsx(SelectContent, {
-                  children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
-                    value: c._id,
-                    children: c.name
-                  }, c._id))
-                })]
-              }, `cust-${customers2.length}`)
-            }), errors.customer && /* @__PURE__ */ jsx("span", {
-              className: "text-red-500 text-xs",
-              children: errors.customer.message
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Site / Project"
-            }), /* @__PURE__ */ jsx(Controller, {
-              name: "site",
-              control,
-              render: ({
-                field
-              }) => /* @__PURE__ */ jsxs(Select, {
-                onValueChange: field.onChange,
-                value: field.value,
-                disabled: !watchCustId,
-                children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                  children: /* @__PURE__ */ jsx(SelectValue, {
-                    placeholder: "Select Site"
-                  })
-                }), /* @__PURE__ */ jsx(SelectContent, {
-                  children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
-                    value: s._id,
-                    children: s.name
-                  }, s._id))
-                })]
-              }, `site-${filteredSites.length}`)
-            }), errors.site && /* @__PURE__ */ jsx("span", {
-              className: "text-red-500 text-xs",
-              children: errors.site.message
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Manual Order No"
-            }), /* @__PURE__ */ jsx(Input, {
-              ...register2("referenceNo"),
-              placeholder: "e.g. PO-123"
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Currency"
-            }), /* @__PURE__ */ jsx(Input, {
-              value: selectedCustomer?.currency?.code || "INR",
-              disabled: true,
-              className: "bg-slate-50 dark:bg-slate-900"
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Exchange Rate"
-            }), /* @__PURE__ */ jsx(Input, {
-              type: "number",
-              ...register2("currencyRate")
-            })]
-          }), isRental && /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Duration (Days)"
-            }), /* @__PURE__ */ jsx(Input, {
-              type: "number",
-              ...register2("duration")
-            })]
-          })]
-        }), (selectedCustomer || selectedSite) && /* @__PURE__ */ jsxs("div", {
-          className: "px-6 pb-4 text-[11px] text-slate-500 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4",
-          children: [/* @__PURE__ */ jsxs("div", {
-            children: [/* @__PURE__ */ jsx("strong", {
-              children: "Billing Address:"
-            }), " ", selectedCustomer?.billingAddress || "-"]
-          }), /* @__PURE__ */ jsxs("div", {
-            children: [/* @__PURE__ */ jsx("strong", {
-              children: "Site Address:"
-            }), " ", selectedSite?.address || "-"]
-          })]
+        }), /* @__PURE__ */ jsxs(Button, {
+          onClick: handleAdd,
+          className: "bg-[#2196F3] hover:bg-[#1976D2] text-white h-10 px-6 font-bold shadow-md",
+          children: [/* @__PURE__ */ jsx(Plus, {
+            className: "mr-2 h-4 w-4"
+          }), " Add"]
         })]
-      }), /* @__PURE__ */ jsxs(Card, {
-        className: "hover-card-glow",
-        children: [/* @__PURE__ */ jsxs(CardHeader, {
-          className: "pb-2 flex flex-row items-center justify-between",
-          children: [/* @__PURE__ */ jsx(CardTitle, {
-            className: "text-base",
-            children: "Line Items"
-          }), /* @__PURE__ */ jsxs(Button, {
-            type: "button",
-            variant: "outline",
-            size: "sm",
-            onClick: addRow,
-            className: "h-8 border-dashed border-primary text-primary hover:bg-primary/5",
-            children: [/* @__PURE__ */ jsx(Plus, {
-              className: "h-3 w-3 mr-1"
-            }), " Add Row"]
-          })]
-        }), /* @__PURE__ */ jsx(CardContent, {
-          className: "p-0 overflow-x-auto",
-          children: /* @__PURE__ */ jsxs(Table, {
-            className: "min-w-[950px]",
-            children: [/* @__PURE__ */ jsx(TableHeader, {
-              children: /* @__PURE__ */ jsxs(TableRow, {
-                className: "bg-slate-50 dark:bg-slate-900/50",
-                children: [/* @__PURE__ */ jsx(TableHead, {
-                  className: "w-[50px] text-center",
-                  children: "#"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  className: "w-[300px]",
-                  children: "Item Description"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  children: "Unit"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  className: "w-[100px]",
-                  children: "Quantity"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  className: "w-[120px]",
-                  children: "Rate"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  className: "w-[120px] text-right",
-                  children: "Total"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  children: "Remark"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  className: "w-[50px]"
+      })]
+    }), /* @__PURE__ */ jsx(Dialog, {
+      open,
+      onOpenChange: setOpen,
+      children: /* @__PURE__ */ jsxs(DialogContent, {
+        className: "sm:max-w-[1000px] max-h-[95vh] overflow-y-auto",
+        children: [/* @__PURE__ */ jsx(DialogHeader, {
+          children: /* @__PURE__ */ jsx(DialogTitle, {
+            children: viewMode ? "Order View" : editingId ? "Edit Order" : "New Order"
+          })
+        }), /* @__PURE__ */ jsxs("form", {
+          onSubmit: handleSubmit(onSubmit),
+          className: "space-y-6",
+          children: [/* @__PURE__ */ jsxs("fieldset", {
+            disabled: viewMode,
+            className: "space-y-6",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Date"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "date",
+                  ...register2("date")
                 })]
-              })
-            }), /* @__PURE__ */ jsx(TableBody, {
-              children: rows.length === 0 ? /* @__PURE__ */ jsx(TableRow, {
-                children: /* @__PURE__ */ jsx(TableCell, {
-                  colSpan: 8,
-                  className: "text-center h-24 text-slate-400",
-                  children: 'Click "Add Row" to start adding items.'
-                })
-              }) : rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
-                children: [/* @__PURE__ */ jsx(TableCell, {
-                  className: "text-center font-medium text-slate-500",
-                  children: i + 1
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  children: /* @__PURE__ */ jsxs(Select, {
-                    onValueChange: (v) => handleItemChange(i, v),
-                    value: row.itemId,
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Customer"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "customer",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
                     children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                      className: "h-9",
                       children: /* @__PURE__ */ jsx(SelectValue, {
-                        placeholder: "Select Item"
+                        placeholder: "Select"
                       })
                     }), /* @__PURE__ */ jsx(SelectContent, {
-                      children: items2.map((x) => /* @__PURE__ */ jsx(SelectItem, {
-                        value: x._id,
-                        children: x.name
-                      }, x._id))
+                      children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: c._id,
+                        children: c.name
+                      }, c._id))
                     })]
                   })
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  className: "text-sm font-medium",
-                  children: row.unit || "-"
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  children: /* @__PURE__ */ jsx(Input, {
-                    type: "number",
-                    className: "h-9",
-                    value: row.quantity,
-                    onChange: (e) => handleCalc(i, "quantity", e.target.value)
-                  })
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  children: /* @__PURE__ */ jsx(Input, {
-                    type: "number",
-                    className: "h-9",
-                    value: row.rate,
-                    onChange: (e) => handleCalc(i, "rate", e.target.value)
-                  })
-                }), /* @__PURE__ */ jsxs(TableCell, {
-                  className: "font-bold text-right text-primary",
-                  children: ["₹", row.amount.toFixed(2)]
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  children: /* @__PURE__ */ jsx(Input, {
-                    className: "h-9 text-xs",
-                    value: row.remark,
-                    onChange: (e) => handleCalc(i, "remark", e.target.value),
-                    placeholder: "Item notes..."
-                  })
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  children: /* @__PURE__ */ jsx(Trash2, {
-                    className: "h-4 w-4 text-red-500 cursor-pointer hover:scale-110 transition-transform",
-                    onClick: () => removeRow(i)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Site / Project"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "site",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !watchCustId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: s._id,
+                        children: s.name
+                      }, s._id))
+                    })]
                   })
                 })]
-              }, i))
-            })]
-          })
-        })]
-      }), /* @__PURE__ */ jsxs("div", {
-        className: "grid grid-cols-1 lg:grid-cols-2 gap-6",
-        children: [/* @__PURE__ */ jsxs(Card, {
-          className: "hover-card-glow",
-          children: [/* @__PURE__ */ jsx(CardHeader, {
-            children: /* @__PURE__ */ jsx(CardTitle, {
-              className: "text-base",
-              children: "Terms & Conditions"
-            })
-          }), /* @__PURE__ */ jsxs(CardContent, {
-            className: "space-y-2",
-            children: [terms.map((t, i) => /* @__PURE__ */ jsxs("div", {
-              className: "flex gap-2",
-              children: [/* @__PURE__ */ jsx(Input, {
-                value: t,
-                onChange: (e) => updateTerm(i, e.target.value),
-                placeholder: `Standard term #${i + 1}`
-              }), /* @__PURE__ */ jsx(Button, {
-                type: "button",
-                variant: "ghost",
-                size: "icon",
-                onClick: () => removeTerm(i),
-                children: /* @__PURE__ */ jsx(Trash2, {
-                  className: "h-4 w-4 text-red-500"
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Ref No."
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("referenceNo")
+                })]
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "border rounded-md overflow-hidden",
+              children: [/* @__PURE__ */ jsxs(Table, {
+                children: [/* @__PURE__ */ jsx(TableHeader, {
+                  children: /* @__PURE__ */ jsxs(TableRow, {
+                    className: "bg-slate-100 dark:bg-slate-800",
+                    children: [/* @__PURE__ */ jsx(TableHead, {
+                      children: "Item"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Qty"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Rate"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Total"
+                    }), !viewMode && /* @__PURE__ */ jsx(TableHead, {})]
+                  })
+                }), /* @__PURE__ */ jsx(TableBody, {
+                  children: rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
+                    children: [/* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsxs(Select, {
+                        onValueChange: (v) => handleItemChange(i, v),
+                        value: row.itemId || row.item,
+                        disabled: viewMode,
+                        children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                          className: "h-8",
+                          children: /* @__PURE__ */ jsx(SelectValue, {
+                            placeholder: "Item"
+                          })
+                        }), /* @__PURE__ */ jsx(SelectContent, {
+                          children: items2.map((it) => /* @__PURE__ */ jsx(SelectItem, {
+                            value: it._id,
+                            children: it.name
+                          }, it._id))
+                        })]
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "h-8 w-20",
+                        value: row.quantity,
+                        onChange: (e) => {
+                          const n = [...rows];
+                          n[i].quantity = Number(e.target.value);
+                          n[i].amount = n[i].quantity * n[i].rate;
+                          setRows(n);
+                        }
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "h-8 w-24",
+                        value: row.rate,
+                        onChange: (e) => {
+                          const n = [...rows];
+                          n[i].rate = Number(e.target.value);
+                          n[i].amount = n[i].quantity * n[i].rate;
+                          setRows(n);
+                        }
+                      })
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right font-bold",
+                      children: ["₹", row.amount?.toFixed(2)]
+                    }), !viewMode && /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Button, {
+                        variant: "ghost",
+                        size: "icon",
+                        onClick: () => {
+                          const n = [...rows];
+                          n.splice(i, 1);
+                          setRows(n);
+                        },
+                        children: /* @__PURE__ */ jsx(Trash2, {
+                          className: "h-4 w-4 text-red-500"
+                        })
+                      })
+                    })]
+                  }, i))
+                })]
+              }), !viewMode && /* @__PURE__ */ jsx("div", {
+                className: "p-3 flex justify-center border-t",
+                children: /* @__PURE__ */ jsxs(Button, {
+                  type: "button",
+                  variant: "outline",
+                  size: "sm",
+                  onClick: addRow,
+                  className: "border-dashed",
+                  children: [/* @__PURE__ */ jsx(Plus, {
+                    size: 14,
+                    className: "mr-1"
+                  }), " Add Item"]
                 })
               })]
-            }, i)), /* @__PURE__ */ jsx(Button, {
-              type: "button",
-              variant: "outline",
-              size: "sm",
-              onClick: addTerm,
-              className: "w-full border-dashed",
-              children: "Add New Term"
             })]
-          })]
-        }), /* @__PURE__ */ jsxs(Card, {
-          className: "bg-slate-50/50 dark:bg-slate-900/20 hover-card-glow border-primary/20",
-          children: [/* @__PURE__ */ jsx(CardHeader, {
-            children: /* @__PURE__ */ jsxs(CardTitle, {
-              className: "text-base flex gap-2",
-              children: [/* @__PURE__ */ jsx(Calculator, {
-                className: "h-5 w-5 text-primary"
-              }), " Totals & Tax"]
-            })
-          }), /* @__PURE__ */ jsxs(CardContent, {
-            className: "space-y-3",
-            children: [/* @__PURE__ */ jsxs("div", {
-              className: "flex justify-between text-sm",
-              children: [/* @__PURE__ */ jsx("span", {
-                children: "Base Amount"
-              }), /* @__PURE__ */ jsxs("span", {
-                className: "font-mono font-bold",
-                children: ["₹", subTotal.toFixed(2)]
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "flex justify-between items-center text-sm",
-              children: [/* @__PURE__ */ jsx("span", {
-                children: "Transport Charges"
-              }), /* @__PURE__ */ jsx(Input, {
-                type: "number",
-                className: "w-28 h-8 text-right font-mono",
-                ...register2("transportCharges")
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "flex justify-between items-center text-sm",
-              children: [/* @__PURE__ */ jsx("span", {
-                children: "Loading Charges"
-              }), /* @__PURE__ */ jsx(Input, {
-                type: "number",
-                className: "w-28 h-8 text-right font-mono",
-                ...register2("loadingCharges")
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "flex justify-between items-center text-sm pt-2 border-t",
-              children: [/* @__PURE__ */ jsx("span", {
-                className: "font-semibold text-primary",
-                children: "Taxation"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "taxCode",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    className: "w-48 h-9",
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Apply Tax"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: taxCodes2.map((t) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: t._id,
-                      children: t.name
-                    }, t._id))
-                  })]
-                })
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "flex justify-between text-xs text-slate-500 italic",
-              children: [/* @__PURE__ */ jsxs("span", {
-                children: ["Calculated Tax (", selectedTax?.totalRate || 0, "%)"]
-              }), /* @__PURE__ */ jsxs("span", {
-                children: ["₹", taxAmount.toFixed(2)]
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "flex justify-between text-xl font-bold border-t pt-3 mt-2 text-primary",
-              children: [/* @__PURE__ */ jsx("span", {
-                children: "Net Total"
-              }), /* @__PURE__ */ jsxs("span", {
-                className: "underline decoration-double underline-offset-4",
-                children: ["₹", grandTotal.toFixed(2)]
-              })]
-            })]
+          }), !viewMode && /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            className: "w-full bg-primary h-12 text-lg font-bold shadow-lg uppercase",
+            children: editingId ? "Update Order" : "Generate Order"
           })]
         })]
-      }), /* @__PURE__ */ jsx("div", {
-        className: "flex justify-end gap-4 pb-4",
-        children: /* @__PURE__ */ jsxs(Button, {
-          type: "submit",
-          className: "w-48 bg-primary hover:bg-primary/90 text-white shadow-lg",
-          children: [/* @__PURE__ */ jsx(Save, {
-            className: "mr-2 h-4 w-4"
-          }), " Save Order"]
-        })
-      })]
-    }), /* @__PURE__ */ jsxs(Card, {
-      className: "hover-card-glow shadow-md border-none overflow-hidden",
-      children: [/* @__PURE__ */ jsx(CardHeader, {
-        className: "bg-slate-50 dark:bg-slate-900 border-b",
-        children: /* @__PURE__ */ jsxs("div", {
-          className: "flex items-center justify-between",
+      })
+    }), /* @__PURE__ */ jsx("div", {
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+      children: history.map((order) => /* @__PURE__ */ jsx(Card, {
+        className: "overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 group bg-white dark:bg-slate-900",
+        children: /* @__PURE__ */ jsxs(CardContent, {
+          className: "p-0",
           children: [/* @__PURE__ */ jsxs("div", {
-            children: [/* @__PURE__ */ jsxs(CardTitle, {
-              className: "flex items-center gap-2 text-lg",
-              children: [/* @__PURE__ */ jsx(Clock, {
-                className: "h-5 w-5 text-primary"
-              }), " Recent Transactions"]
-            }), /* @__PURE__ */ jsxs(CardDescription, {
-              children: ["View and track your latest ", type.toLowerCase(), " orders."]
+            className: "p-4 flex justify-between items-center border-b bg-slate-50/50 dark:bg-slate-800/50",
+            children: [/* @__PURE__ */ jsx("span", {
+              className: "font-black text-slate-800 dark:text-white text-sm tracking-tight",
+              children: order.docNo
+            }), /* @__PURE__ */ jsx("span", {
+              className: "text-[11px] font-bold text-slate-500",
+              children: format(new Date(order.date), "dd-MMM-yyyy")
             })]
-          }), /* @__PURE__ */ jsxs(Badge, {
-            variant: "secondary",
-            className: "font-mono",
-            children: [type, " Orders"]
-          })]
-        })
-      }), /* @__PURE__ */ jsxs(CardContent, {
-        className: "p-0",
-        children: [/* @__PURE__ */ jsx("div", {
-          className: "overflow-x-auto",
-          children: /* @__PURE__ */ jsxs(Table, {
-            children: [/* @__PURE__ */ jsx(TableHeader, {
-              children: /* @__PURE__ */ jsxs(TableRow, {
-                className: "bg-slate-100/50 dark:bg-slate-900/50",
-                children: [/* @__PURE__ */ jsx(TableHead, {
-                  children: "Doc Number"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  children: "Date"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  children: "Customer"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  className: "text-right",
-                  children: "Grand Total"
-                }), /* @__PURE__ */ jsx(TableHead, {
-                  className: "text-center",
-                  children: "Items"
-                })]
-              })
-            }), /* @__PURE__ */ jsx(TableBody, {
-              children: isLoadingHistory ? /* @__PURE__ */ jsx(TableRow, {
-                children: /* @__PURE__ */ jsx(TableCell, {
-                  colSpan: 5,
-                  className: "text-center h-32",
-                  children: "Loading historical data..."
-                })
-              }) : history.length === 0 ? /* @__PURE__ */ jsx(TableRow, {
-                children: /* @__PURE__ */ jsx(TableCell, {
-                  colSpan: 5,
-                  className: "text-center h-32 text-slate-400",
-                  children: "No records found for this category."
-                })
-              }) : history.map((order) => /* @__PURE__ */ jsxs(TableRow, {
-                className: "group hover:bg-slate-50 dark:hover:bg-slate-900/50",
-                children: [/* @__PURE__ */ jsx(TableCell, {
-                  className: "font-mono font-bold text-primary",
-                  children: order.docNo
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  className: "text-slate-600",
-                  children: format(new Date(order.date), "dd MMM yyyy")
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  className: "font-medium",
-                  children: order.customer?.name || "N/A"
-                }), /* @__PURE__ */ jsxs(TableCell, {
-                  className: "text-right font-bold text-slate-900 dark:text-slate-100",
-                  children: ["₹", order.grandTotal?.toLocaleString()]
-                }), /* @__PURE__ */ jsx(TableCell, {
-                  className: "text-center",
-                  children: /* @__PURE__ */ jsx(Badge, {
-                    variant: "outline",
-                    children: order.items?.length || 0
-                  })
-                })]
-              }, order._id))
-            })]
-          })
-        }), /* @__PURE__ */ jsxs("div", {
-          className: "flex items-center justify-between p-4 border-t bg-slate-50/50 dark:bg-slate-900/30",
-          children: [/* @__PURE__ */ jsxs("div", {
-            className: "text-xs text-slate-500 font-medium italic",
-            children: ["Showing page ", page, " of ", totalPages]
           }), /* @__PURE__ */ jsxs("div", {
-            className: "flex gap-2",
-            children: [/* @__PURE__ */ jsxs(Button, {
-              variant: "outline",
-              size: "sm",
-              onClick: () => fetchHistory(page - 1),
-              disabled: page <= 1 || isLoadingHistory,
-              className: "h-8 shadow-sm",
-              children: [/* @__PURE__ */ jsx(ChevronLeft, {
-                className: "h-4 w-4"
-              }), " Previous"]
-            }), /* @__PURE__ */ jsxs(Button, {
-              variant: "outline",
-              size: "sm",
-              onClick: () => fetchHistory(page + 1),
-              disabled: page >= totalPages || isLoadingHistory,
-              className: "h-8 shadow-sm",
-              children: ["Next ", /* @__PURE__ */ jsx(ChevronRight, {
-                className: "h-4 w-4"
+            className: "p-5 space-y-3",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase mt-0.5",
+                children: "Customer:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-800 dark:text-slate-200 text-sm text-right truncate flex-1",
+                children: order.customer?.name || "N/A"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Basic Amount:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-700 dark:text-slate-300 text-sm",
+                children: fmt(order.subTotal || 0)
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1 border-t border-dashed",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-xs text-slate-900 dark:text-white font-black uppercase",
+                children: "Total Amount:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-primary text-base",
+                children: fmt(order.grandTotal || 0)
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Order Status:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: cn("font-black text-[10px] uppercase px-2 py-0.5 rounded", order.status === "Completed" ? "text-green-600 bg-green-50" : "text-orange-600 bg-orange-50"),
+                children: order.status || "Pending"
               })]
             })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              onClick: () => handleView(order),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-indigo-600 hover:bg-indigo-50 rounded-full",
+              children: /* @__PURE__ */ jsx(Eye, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleEdit(order),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-blue-500 hover:bg-blue-50 rounded-full",
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleDownload(order),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-emerald-600 hover:bg-emerald-50 rounded-full",
+              children: /* @__PURE__ */ jsx(CloudDownload, {
+                size: 18
+              })
+            })]
           })]
+        })
+      }, order._id))
+    }), /* @__PURE__ */ jsxs("div", {
+      className: "flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-lg border",
+      children: [/* @__PURE__ */ jsxs("div", {
+        className: "text-xs text-slate-500 italic",
+        children: ["Page ", page, " of ", totalPages]
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex gap-2",
+        children: [/* @__PURE__ */ jsx(Button, {
+          variant: "outline",
+          size: "sm",
+          onClick: () => fetchHistory(page - 1),
+          disabled: page <= 1,
+          className: "h-8",
+          children: /* @__PURE__ */ jsx(ChevronLeft, {
+            className: "h-4 w-4"
+          })
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "outline",
+          size: "sm",
+          onClick: () => fetchHistory(page + 1),
+          disabled: page >= totalPages,
+          className: "h-8",
+          children: /* @__PURE__ */ jsx(ChevronRight, {
+            className: "h-4 w-4"
+          })
         })]
       })]
     })]
@@ -7672,49 +7805,31 @@ function SalesForm({
 const sales = UNSAFE_withComponentProps(function SalesPage() {
   return /* @__PURE__ */ jsxs("div", {
     className: "space-y-6",
-    children: [/* @__PURE__ */ jsxs("div", {
-      className: "flex flex-col md:flex-row md:items-center justify-between gap-4",
-      children: [/* @__PURE__ */ jsxs("div", {
-        children: [/* @__PURE__ */ jsx("h2", {
-          className: "text-3xl font-bold tracking-tight text-slate-900 dark:text-white",
-          children: "Sales & Rental Orders"
-        }), /* @__PURE__ */ jsx("p", {
-          className: "text-slate-500 text-sm",
-          children: "Issue new orders and track historical transactions."
-        })]
-      }), /* @__PURE__ */ jsx("div", {
-        className: "p-1 bg-slate-100 dark:bg-slate-900 rounded-lg border flex gap-1",
-        children: /* @__PURE__ */ jsxs("div", {
-          className: "flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-orange-600 bg-white dark:bg-slate-800 rounded shadow-sm border border-orange-100",
-          children: [/* @__PURE__ */ jsx(ShoppingBag, {
-            size: 14
-          }), " Active Module"]
-        })
-      })]
+    children: [/* @__PURE__ */ jsx("h2", {
+      className: "text-3xl font-bold tracking-tight text-slate-900 dark:text-white",
+      children: "Sales Management"
     }), /* @__PURE__ */ jsxs(Tabs, {
       defaultValue: "rental",
       className: "w-full",
       children: [/* @__PURE__ */ jsxs(TabsList, {
-        className: "grid w-full grid-cols-2 h-12 bg-slate-100 dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 mb-6 max-w-md",
+        className: "grid w-full grid-cols-2 max-w-md h-12 bg-slate-100 dark:bg-slate-900 rounded-lg p-1",
         children: [/* @__PURE__ */ jsx(TabsTrigger, {
           value: "rental",
-          className: "data-[state=active]:bg-primary data-[state=active]:text-white transition-all",
+          className: "data-[state=active]:bg-primary data-[state=active]:text-white",
           children: "Rental Sales"
         }), /* @__PURE__ */ jsx(TabsTrigger, {
           value: "sales",
-          className: "data-[state=active]:bg-primary data-[state=active]:text-white transition-all",
+          className: "data-[state=active]:bg-primary data-[state=active]:text-white",
           children: "Standard Sales"
         })]
       }), /* @__PURE__ */ jsx(TabsContent, {
         value: "rental",
-        className: "outline-none",
-        children: /* @__PURE__ */ jsx(SalesForm, {
+        children: /* @__PURE__ */ jsx(SalesOrdersContainer, {
           type: "RENTAL"
         })
       }), /* @__PURE__ */ jsx(TabsContent, {
         value: "sales",
-        className: "outline-none",
-        children: /* @__PURE__ */ jsx(SalesForm, {
+        children: /* @__PURE__ */ jsx(SalesOrdersContainer, {
           type: "SALE"
         })
       })]
@@ -7724,25 +7839,27 @@ const sales = UNSAFE_withComponentProps(function SalesPage() {
 const route19 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: sales,
-  meta: meta$9
+  meta: meta$d
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$8({}) {
+function meta$c({}) {
   return [{
-    title: "Users - ScaffRent"
+    title: "User Management - ScaffRent"
   }];
 }
 const userSchema = z.object({
   name: z.string().min(2, "Name required"),
-  email: z.string().email(),
+  email: z.string().email("Invalid email"),
   mobile: z.string().min(10, "Mobile required"),
-  role: z.string(),
+  gender: z.string().min(1, "Select gender"),
+  role: z.string().min(1, "Select role"),
+  status: z.string().min(1, "Select status"),
   password: z.string().optional()
-  // Optional on edit
 });
 const users = UNSAFE_withComponentProps(function UsersPage() {
   const [users2, setUsers] = useState([]);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [page, setPage] = useState(1);
   const {
     register: register2,
     control,
@@ -7758,7 +7875,9 @@ const users = UNSAFE_withComponentProps(function UsersPage() {
       name: "",
       email: "",
       mobile: "",
-      role: "Operator",
+      gender: "Male",
+      role: "User",
+      status: "Active",
       password: ""
     }
   });
@@ -7780,11 +7899,15 @@ const users = UNSAFE_withComponentProps(function UsersPage() {
   }, []);
   const handleEdit = (user) => {
     setEditingId(user._id);
-    setValue("name", user.name || "");
-    setValue("email", user.email);
-    setValue("mobile", user.mobile);
-    setValue("role", user.role);
-    setValue("password", "");
+    reset({
+      name: user.name || "",
+      email: user.email,
+      mobile: user.mobile,
+      gender: user.gender || "Male",
+      role: user.role || "User",
+      status: user.status || "Active",
+      password: ""
+    });
     setOpen(true);
   };
   const handleAdd = () => {
@@ -7793,7 +7916,9 @@ const users = UNSAFE_withComponentProps(function UsersPage() {
       name: "",
       email: "",
       mobile: "",
-      role: "Operator",
+      gender: "Male",
+      role: "User",
+      status: "Active",
       password: ""
     });
     setOpen(true);
@@ -7816,11 +7941,9 @@ const users = UNSAFE_withComponentProps(function UsersPage() {
         body: JSON.stringify(data)
       });
       if (res.ok) {
-        toast.success("Saved!");
+        toast.success(editingId ? "User updated!" : "User created!");
         setOpen(false);
         fetchUsers();
-      } else {
-        toast.error("Failed");
       }
     } catch (e) {
       toast.error("Server Error");
@@ -7829,44 +7952,58 @@ const users = UNSAFE_withComponentProps(function UsersPage() {
   return /* @__PURE__ */ jsxs("div", {
     className: "space-y-6",
     children: [/* @__PURE__ */ jsxs("div", {
-      className: "flex justify-between items-center",
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
       children: [/* @__PURE__ */ jsx("h2", {
-        className: "text-2xl font-bold",
-        children: "User Management"
-      }), /* @__PURE__ */ jsxs(Button, {
-        onClick: handleAdd,
-        className: "hover-card-glow bg-orange-600 hover:bg-orange-700",
-        children: [/* @__PURE__ */ jsx(Plus, {
-          className: "mr-2 h-4 w-4"
-        }), " Add User"]
+        className: "text-xl font-bold text-slate-800 dark:text-white",
+        children: "Users"
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search Users...",
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none"
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 text-primary border",
+          onClick: fetchUsers,
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
+        }), /* @__PURE__ */ jsx(Button, {
+          onClick: handleAdd,
+          className: "bg-[#2196F3] hover:bg-[#1976D2] text-white h-10 px-8 font-bold shadow-md",
+          children: "Add"
+        })]
       })]
     }), /* @__PURE__ */ jsx(Dialog, {
       open,
       onOpenChange: setOpen,
       children: /* @__PURE__ */ jsxs(DialogContent, {
-        className: "sm:max-w-[500px]",
+        className: "sm:max-w-[550px]",
         children: [/* @__PURE__ */ jsx(DialogHeader, {
           children: /* @__PURE__ */ jsx(DialogTitle, {
-            children: editingId ? "Edit User" : "Add User"
+            children: editingId ? "Edit User Account" : "Register New User"
           })
         }), /* @__PURE__ */ jsxs("form", {
           onSubmit: handleSubmit(onSubmit),
           className: "space-y-4 py-2",
           children: [/* @__PURE__ */ jsxs("div", {
-            className: "grid grid-cols-3 gap-4",
+            className: "grid grid-cols-2 gap-4",
             children: [/* @__PURE__ */ jsxs("div", {
-              className: "col-span-2 space-y-2",
+              className: "space-y-2 col-span-2 sm:col-span-1",
               children: [/* @__PURE__ */ jsx(Label, {
                 children: "Full Name"
               }), /* @__PURE__ */ jsx(Input, {
                 ...register2("name"),
-                placeholder: "John Doe"
-              }), errors.name && /* @__PURE__ */ jsx("span", {
-                className: "text-red-500 text-xs",
-                children: errors.name.message
+                placeholder: "Name"
               })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
+              className: "space-y-2 col-span-2 sm:col-span-1",
               children: [/* @__PURE__ */ jsx(Label, {
                 children: "Role"
               }), /* @__PURE__ */ jsx(Controller, {
@@ -7884,11 +8021,86 @@ const users = UNSAFE_withComponentProps(function UsersPage() {
                       value: "Admin",
                       children: "Admin"
                     }), /* @__PURE__ */ jsx(SelectItem, {
-                      value: "Operator",
-                      children: "Operator"
+                      value: "Super Admin",
+                      children: "Super Admin"
                     }), /* @__PURE__ */ jsx(SelectItem, {
-                      value: "Viewer",
-                      children: "Viewer"
+                      value: "User",
+                      children: "User"
+                    })]
+                  })]
+                })
+              })]
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "grid grid-cols-2 gap-4",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "space-y-2",
+              children: [/* @__PURE__ */ jsx(Label, {
+                children: "Email Address"
+              }), /* @__PURE__ */ jsx(Input, {
+                ...register2("email"),
+                placeholder: "email@gravity.com"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "space-y-2",
+              children: [/* @__PURE__ */ jsx(Label, {
+                children: "Mobile Number"
+              }), /* @__PURE__ */ jsx(Input, {
+                ...register2("mobile"),
+                placeholder: "9000000000"
+              })]
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "grid grid-cols-2 gap-4",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "space-y-2",
+              children: [/* @__PURE__ */ jsx(Label, {
+                children: "Gender"
+              }), /* @__PURE__ */ jsx(Controller, {
+                name: "gender",
+                control,
+                render: ({
+                  field
+                }) => /* @__PURE__ */ jsxs(Select, {
+                  onValueChange: field.onChange,
+                  value: field.value,
+                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                    children: /* @__PURE__ */ jsx(SelectValue, {})
+                  }), /* @__PURE__ */ jsxs(SelectContent, {
+                    children: [/* @__PURE__ */ jsx(SelectItem, {
+                      value: "Male",
+                      children: "Male"
+                    }), /* @__PURE__ */ jsx(SelectItem, {
+                      value: "Female",
+                      children: "Female"
+                    }), /* @__PURE__ */ jsx(SelectItem, {
+                      value: "Other",
+                      children: "Other"
+                    })]
+                  })]
+                })
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "space-y-2",
+              children: [/* @__PURE__ */ jsx(Label, {
+                children: "Status"
+              }), /* @__PURE__ */ jsx(Controller, {
+                name: "status",
+                control,
+                render: ({
+                  field
+                }) => /* @__PURE__ */ jsxs(Select, {
+                  onValueChange: field.onChange,
+                  value: field.value,
+                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                    children: /* @__PURE__ */ jsx(SelectValue, {})
+                  }), /* @__PURE__ */ jsxs(SelectContent, {
+                    children: [/* @__PURE__ */ jsx(SelectItem, {
+                      value: "Active",
+                      children: "Active"
+                    }), /* @__PURE__ */ jsx(SelectItem, {
+                      value: "Inactive",
+                      children: "Inactive"
                     })]
                   })]
                 })
@@ -7896,104 +8108,155 @@ const users = UNSAFE_withComponentProps(function UsersPage() {
             })]
           }), /* @__PURE__ */ jsxs("div", {
             className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Email"
-            }), /* @__PURE__ */ jsx(Input, {
-              ...register2("email"),
-              placeholder: "user@company.com"
-            }), errors.email && /* @__PURE__ */ jsx("span", {
-              className: "text-red-500 text-xs",
-              children: errors.email.message
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Mobile"
-            }), /* @__PURE__ */ jsx(Input, {
-              ...register2("mobile"),
-              placeholder: "9876543210"
-            }), errors.mobile && /* @__PURE__ */ jsx("span", {
-              className: "text-red-500 text-xs",
-              children: errors.mobile.message
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
             children: [/* @__PURE__ */ jsxs(Label, {
               children: ["Password ", editingId && /* @__PURE__ */ jsx("span", {
-                className: "text-xs text-slate-400 font-normal",
-                children: "(Leave blank to keep current)"
+                className: "text-[10px] text-slate-400 font-normal ml-1",
+                children: "(Leave blank if no change)"
               })]
             }), /* @__PURE__ */ jsx(Input, {
               type: "password",
               ...register2("password"),
-              placeholder: "******"
+              placeholder: "••••••••"
             })]
           }), /* @__PURE__ */ jsx(DialogFooter, {
+            className: "pt-2",
             children: /* @__PURE__ */ jsx(Button, {
               type: "submit",
-              className: "hover-card-glow bg-orange-600 w-full",
-              children: editingId ? "Update" : "Save"
+              className: "bg-[#2196F3] w-full h-11 text-white font-bold uppercase tracking-widest",
+              children: editingId ? "Update User" : "Save User"
             })
           })]
         })]
       })
     }), /* @__PURE__ */ jsx("div", {
-      className: "grid gap-4 md:grid-cols-4 lg:grid-cols-4",
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
       children: users2.map((u) => /* @__PURE__ */ jsx(Card, {
-        className: "relative hover-card-glow hover:shadow-md transition-all border-l-4 border-l-transparent hover:border-l-orange-500",
+        className: "overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 bg-white dark:bg-slate-900 group",
         children: /* @__PURE__ */ jsxs(CardContent, {
-          className: "p-5",
-          children: [/* @__PURE__ */ jsx(Button, {
-            variant: "ghost",
-            size: "icon",
-            className: "absolute top-2 right-2 text-slate-400 hover:text-orange-600",
-            onClick: () => handleEdit(u),
-            children: /* @__PURE__ */ jsx(Pencil, {
-              className: "h-4 w-4"
-            })
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "flex items-center gap-3 mb-3",
-            children: [/* @__PURE__ */ jsx("div", {
-              className: "h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center font-bold text-orange-700",
-              children: (u.name || "U").charAt(0).toUpperCase()
+          className: "p-0",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "p-5 flex items-center justify-between",
+            children: [/* @__PURE__ */ jsxs(Avatar, {
+              className: "h-12 w-12 border-2 border-primary/10 shadow-sm",
+              children: [/* @__PURE__ */ jsx(AvatarImage, {
+                src: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}&backgroundColor=b6e3f4`
+              }), /* @__PURE__ */ jsx(AvatarFallback, {
+                className: "bg-primary/10 text-primary font-bold",
+                children: (u.name || "U")[0]
+              })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "overflow-hidden",
+              className: "text-right",
               children: [/* @__PURE__ */ jsx("h4", {
-                className: "font-bold truncate text-slate-900",
-                children: u.name || "Unknown User"
-              }), /* @__PURE__ */ jsx("p", {
-                className: "text-xs text-slate-500 truncate",
-                children: u.email
+                className: "font-black text-slate-800 dark:text-white text-base truncate max-w-[140px]",
+                children: u.name || "Unknown"
+              }), /* @__PURE__ */ jsxs("span", {
+                className: "text-[10px] font-mono text-slate-400",
+                children: ["ID: ", u.userCode]
               })]
             })]
           }), /* @__PURE__ */ jsxs("div", {
-            className: "flex justify-between items-center text-sm border-t pt-3 mt-2",
+            className: "px-5 pb-5 space-y-2",
             children: [/* @__PURE__ */ jsxs("div", {
-              className: "flex flex-col",
+              className: "flex justify-between items-center text-[13px]",
               children: [/* @__PURE__ */ jsx("span", {
-                className: "text-[10px] uppercase text-slate-400 font-semibold",
-                children: "User Code"
+                className: "text-slate-400 font-bold uppercase text-[10px]",
+                children: "Email:"
               }), /* @__PURE__ */ jsx("span", {
-                className: "font-mono text-xs text-slate-600",
-                children: u.userCode
+                className: "text-slate-700 dark:text-slate-300 font-medium truncate max-w-[160px]",
+                children: u.email
               })]
-            }), /* @__PURE__ */ jsx(Badge, {
-              variant: "secondary",
-              className: u.role === "Admin" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700",
-              children: u.role || "User"
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center text-[13px]",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase text-[10px]",
+                children: "Mobile:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "text-slate-700 dark:text-slate-300 font-medium",
+                children: u.mobile
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center text-[13px]",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase text-[10px]",
+                children: "Gender:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "text-slate-700 dark:text-slate-300 font-medium",
+                children: u.gender || "Male"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center text-[13px]",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase text-[10px]",
+                children: "Role:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "text-slate-700 dark:text-slate-300 font-medium",
+                children: u.role || "User"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center text-[13px] pt-1",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase text-[10px]",
+                children: "Status:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: cn("font-black uppercase text-[11px]", u.status === "Active" ? "text-green-600" : "text-red-500"),
+                children: u.status || "Active"
+              })]
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-blue-500 hover:bg-blue-50 rounded-full transition-colors",
+              onClick: () => handleEdit(u),
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-red-500 hover:bg-red-50 rounded-full transition-colors",
+              onClick: () => toast.error("Delete functionality protected"),
+              children: /* @__PURE__ */ jsx(Trash2, {
+                size: 18
+              })
             })]
           })]
         })
       }, u._id))
+    }), /* @__PURE__ */ jsx("div", {
+      className: "flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-lg border shadow-sm",
+      children: /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-1 text-xs text-slate-500 font-medium",
+        children: [/* @__PURE__ */ jsx(ChevronLeft, {
+          className: "h-3 w-3"
+        }), /* @__PURE__ */ jsx(ChevronLeft, {
+          className: "h-3 w-3 -ml-1"
+        }), /* @__PURE__ */ jsx(ChevronLeft, {
+          className: "h-4 w-4 ml-2 cursor-pointer hover:text-primary"
+        }), /* @__PURE__ */ jsx("span", {
+          className: "mx-4 bg-slate-100 px-3 py-1 rounded-full text-slate-900 font-bold",
+          children: page
+        }), /* @__PURE__ */ jsx(ChevronRight, {
+          className: "h-4 w-4 mr-2 cursor-pointer hover:text-primary"
+        }), /* @__PURE__ */ jsx(ChevronRight, {
+          className: "h-3 w-3"
+        }), /* @__PURE__ */ jsx(ChevronRight, {
+          className: "h-3 w-3 -ml-1"
+        }), /* @__PURE__ */ jsxs("span", {
+          className: "ml-4 italic uppercase text-[10px]",
+          children: ["1 - ", users2.length, " of ", users2.length, " items"]
+        })]
+      })
     })]
   });
 });
 const route20 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: users,
-  meta: meta$8
+  meta: meta$c
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$7({}) {
+function meta$b({}) {
   return [{
     title: "My Profile - ScaffRent"
   }];
@@ -8115,9 +8378,9 @@ const profile = UNSAFE_withComponentProps(function Profile() {
 const route21 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: profile,
-  meta: meta$7
+  meta: meta$b
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$6({}) {
+function meta$a({}) {
   return [{
     title: "System Settings - ScaffRent"
   }];
@@ -8236,9 +8499,9 @@ const settings = UNSAFE_withComponentProps(function SettingsPage() {
 const route22 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: settings,
-  meta: meta$6
+  meta: meta$a
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$5({}) {
+function meta$9({}) {
   return [{
     title: "State Master - ScaffRent"
   }];
@@ -8575,9 +8838,9 @@ const states = UNSAFE_withComponentProps(function States() {
 const route23 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: states,
-  meta: meta$5
+  meta: meta$9
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$4({}) {
+function meta$8({}) {
   return [{
     title: "Rental GRN - ScaffRent"
   }];
@@ -8600,6 +8863,7 @@ const rentalGrn = UNSAFE_withComponentProps(function RentalGRN() {
   const [siteItems, setSiteItems] = useState([]);
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const {
     register: register2,
@@ -8607,10 +8871,7 @@ const rentalGrn = UNSAFE_withComponentProps(function RentalGRN() {
     handleSubmit,
     watch,
     reset,
-    setValue,
-    formState: {
-      errors
-    }
+    setValue
   } = useForm({
     resolver: zodResolver(grnSchema),
     defaultValues: {
@@ -8672,33 +8933,9 @@ const rentalGrn = UNSAFE_withComponentProps(function RentalGRN() {
       fetchInventory();
     }
   }, [watchSite, editingId]);
-  const handleEdit = (grn) => {
-    setEditingId(grn._id);
-    setValue("date", grn.date.split("T")[0]);
-    setValue("customer", grn.customer?._id || "");
-    setValue("site", grn.site?._id || "");
-    setValue("warehouse", grn.warehouse || "");
-    setValue("vehicleNo", grn.vehicleNo);
-    setValue("driverName", grn.driverName);
-    setValue("remark", grn.remark);
-    const gridData = grn.items.map((i) => ({
-      item: i.item,
-      itemCode: i.itemCode,
-      itemName: i.itemName,
-      unit: i.unit,
-      balanceQty: 0,
-      qtyOk: i.qtyOk,
-      qtyExchange: i.qtyExchange,
-      qtyExcess: i.qtyExcess,
-      totalQty: i.totalQty,
-      rate: i.rate,
-      amount: i.amount
-    }));
-    setRows(gridData);
-    setOpen(true);
-  };
   const handleAdd = () => {
     setEditingId(null);
+    setViewMode(false);
     setRows([]);
     reset({
       date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
@@ -8710,6 +8947,41 @@ const rentalGrn = UNSAFE_withComponentProps(function RentalGRN() {
       remark: ""
     });
     setOpen(true);
+  };
+  const handleEdit = (grn) => {
+    setEditingId(grn._id);
+    setViewMode(false);
+    reset({
+      date: grn.date.split("T")[0],
+      customer: grn.customer?._id || "",
+      site: grn.site?._id || "",
+      warehouse: grn.warehouse || "",
+      vehicleNo: grn.vehicleNo,
+      driverName: grn.driverName,
+      remark: grn.remark
+    });
+    setRows(grn.items.map((i) => ({
+      item: i.item,
+      itemCode: i.itemCode,
+      itemName: i.itemName,
+      unit: i.unit,
+      balanceQty: 0,
+      qtyOk: i.qtyOk,
+      qtyExchange: i.qtyExchange,
+      qtyExcess: i.qtyExcess,
+      totalQty: i.totalQty,
+      rate: i.rate,
+      amount: i.amount
+    })));
+    setOpen(true);
+  };
+  const handleView = (grn) => {
+    handleEdit(grn);
+    setViewMode(true);
+  };
+  const handleDownload = (grn) => {
+    toast.info(`Downloading Return Note ${grn.docNo}...`);
+    window.print();
   };
   const addRow = () => setRows([...rows, {
     item: "",
@@ -8771,7 +9043,7 @@ const rentalGrn = UNSAFE_withComponentProps(function RentalGRN() {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        toast.success("Success!");
+        toast.success("Saved Successfully!");
         setOpen(false);
         fetchAll();
       }
@@ -8782,16 +9054,35 @@ const rentalGrn = UNSAFE_withComponentProps(function RentalGRN() {
   return /* @__PURE__ */ jsxs("div", {
     className: "space-y-6",
     children: [/* @__PURE__ */ jsxs("div", {
-      className: "flex justify-between items-center",
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
       children: [/* @__PURE__ */ jsx("h2", {
-        className: "text-2xl font-bold",
-        children: "Rental GRN (Returns)"
-      }), /* @__PURE__ */ jsxs(Button, {
-        onClick: handleAdd,
-        className: "bg-primary hover-card-glow",
-        children: [/* @__PURE__ */ jsx(Plus, {
-          className: "mr-2 h-4 w-4"
-        }), " Create GRN"]
+        className: "text-xl font-bold text-slate-800 dark:text-white uppercase tracking-tight text-primary",
+        children: "Rental Returns (GRN)"
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search Returns...",
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none"
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 text-primary border",
+          onClick: fetchAll,
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
+        }), /* @__PURE__ */ jsxs(Button, {
+          onClick: handleAdd,
+          className: "bg-primary hover:bg-primary/90 text-white h-10 px-6 font-bold shadow-md",
+          children: [/* @__PURE__ */ jsx(Plus, {
+            className: "mr-2 h-4 w-4"
+          }), " Add"]
+        })]
       })]
     }), /* @__PURE__ */ jsx(Dialog, {
       open,
@@ -8800,285 +9091,326 @@ const rentalGrn = UNSAFE_withComponentProps(function RentalGRN() {
         className: "sm:max-w-[1100px] max-h-[95vh] overflow-y-auto",
         children: [/* @__PURE__ */ jsx(DialogHeader, {
           children: /* @__PURE__ */ jsx(DialogTitle, {
-            children: editingId ? "Edit GRN" : "New Goods Received Note"
+            children: viewMode ? "GRN Preview" : editingId ? "Edit Return Note" : "Create Rental GRN"
           })
         }), /* @__PURE__ */ jsxs("form", {
           onSubmit: handleSubmit(onSubmit),
           className: "space-y-6 py-2",
-          children: [/* @__PURE__ */ jsxs("div", {
-            className: "grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border",
+          children: [/* @__PURE__ */ jsxs("fieldset", {
+            disabled: viewMode,
+            className: "space-y-6",
             children: [/* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Return Date"
-              }), /* @__PURE__ */ jsx(Input, {
-                type: "date",
-                ...register2("date")
+              className: "grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Return Date"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "date",
+                  ...register2("date")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Customer"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "customer",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: c._id,
+                        children: c.name
+                      }, c._id))
+                    })]
+                  }, customers2.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Site (Source)"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "site",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !watchCustomer || !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: s._id,
+                        children: s.name
+                      }, s._id))
+                    })]
+                  }, filteredSites.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "To Warehouse"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "warehouse",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: warehouses2.map((w) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: w._id,
+                        children: w.name
+                      }, w._id))
+                    })]
+                  }, warehouses2.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Vehicle No"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("vehicleNo"),
+                  placeholder: "MH-XX-..."
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Driver Name"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("driverName")
+                })]
               })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Customer"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "customer",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  disabled: !!editingId,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: c._id,
-                      children: c.name
-                    }, c._id))
-                  })]
-                }, `cust-${customers2.length}`)
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Site (Source)"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "site",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  disabled: !watchCustomer || !!editingId,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: s._id,
-                      children: s.name
-                    }, s._id))
-                  })]
-                }, `site-${filteredSites.length}`)
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "To Warehouse"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "warehouse",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: warehouses2.map((w) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: w._id,
-                      children: w.name
-                    }, w._id))
-                  })]
-                }, `wh-${warehouses2.length}`)
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Vehicle No"
-              }), /* @__PURE__ */ jsx(Input, {
-                ...register2("vehicleNo")
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Driver Name"
-              }), /* @__PURE__ */ jsx(Input, {
-                ...register2("driverName")
-              })]
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "border rounded-md overflow-x-auto",
-            children: [/* @__PURE__ */ jsxs(Table, {
-              className: "min-w-[1000px]",
-              children: [/* @__PURE__ */ jsx(TableHeader, {
-                children: /* @__PURE__ */ jsxs(TableRow, {
-                  className: "bg-slate-100 dark:bg-slate-800",
-                  children: [/* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[50px]",
-                    children: "Sr."
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    children: "Item (At Site)"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right",
-                    children: "Unit"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right text-slate-500",
-                    children: "Site Bal."
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right font-bold text-green-600 bg-green-50/30",
-                    children: "OK Qty"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right font-bold text-red-600 bg-red-50/30",
-                    children: "Exch/Dmg"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right font-bold text-blue-600 bg-blue-50/30",
-                    children: "Excess"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right",
-                    children: "Rate"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right",
-                    children: "Amount"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[50px]"
-                  })]
-                })
-              }), /* @__PURE__ */ jsx(TableBody, {
-                children: rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
-                  children: [/* @__PURE__ */ jsx(TableCell, {
-                    className: "text-center",
-                    children: i + 1
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: editingId ? /* @__PURE__ */ jsx("span", {
-                      className: "text-sm font-medium",
-                      children: row.itemName
-                    }) : /* @__PURE__ */ jsxs(Select, {
-                      onValueChange: (v) => handleItemSelect(i, v),
-                      value: row.item,
-                      children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                        className: "h-8 min-w-[180px]",
-                        children: /* @__PURE__ */ jsx(SelectValue, {
-                          placeholder: "Item"
+              className: "border rounded-md overflow-x-auto",
+              children: [/* @__PURE__ */ jsxs(Table, {
+                className: "min-w-[1000px]",
+                children: [/* @__PURE__ */ jsx(TableHeader, {
+                  children: /* @__PURE__ */ jsxs(TableRow, {
+                    className: "bg-slate-100 dark:bg-slate-800",
+                    children: [/* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[50px]",
+                      children: "Sr."
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Item"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Unit"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right text-slate-500",
+                      children: "Site Bal."
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right font-bold text-green-600 bg-green-50/30",
+                      children: "OK Qty"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right font-bold text-red-600 bg-red-50/30",
+                      children: "Exch/Dmg"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right font-bold text-blue-600 bg-blue-50/30",
+                      children: "Excess"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Amount"
+                    }), !viewMode && /* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[40px]"
+                    })]
+                  })
+                }), /* @__PURE__ */ jsx(TableBody, {
+                  children: rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
+                    children: [/* @__PURE__ */ jsx(TableCell, {
+                      className: "text-center font-bold text-slate-400",
+                      children: i + 1
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: editingId ? /* @__PURE__ */ jsx("span", {
+                        className: "text-sm font-medium",
+                        children: row.itemName
+                      }) : /* @__PURE__ */ jsxs(Select, {
+                        onValueChange: (v) => handleItemSelect(i, v),
+                        value: row.item,
+                        children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                          className: "h-8 min-w-[180px]",
+                          children: /* @__PURE__ */ jsx(SelectValue, {
+                            placeholder: "Item"
+                          })
+                        }), /* @__PURE__ */ jsx(SelectContent, {
+                          children: siteItems.map((si) => /* @__PURE__ */ jsx(SelectItem, {
+                            value: si.item._id,
+                            children: si.itemName
+                          }, si.item._id))
+                        })]
+                      }, siteItems.length)
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      className: "text-center text-xs",
+                      children: row.unit || "-"
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      className: "text-right text-slate-500",
+                      children: row.balanceQty
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "h-8 text-right font-bold border-green-200",
+                        value: row.qtyOk,
+                        onChange: (e) => handleCalc(i, "qtyOk", e.target.value)
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "h-8 text-right font-bold border-red-200",
+                        value: row.qtyExchange,
+                        onChange: (e) => handleCalc(i, "qtyExchange", e.target.value)
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "h-8 text-right font-bold border-blue-200",
+                        value: row.qtyExcess,
+                        onChange: (e) => handleCalc(i, "qtyExcess", e.target.value)
+                      })
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right font-bold text-primary",
+                      children: ["₹", row.amount?.toFixed(2)]
+                    }), !viewMode && /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Button, {
+                        variant: "ghost",
+                        size: "icon",
+                        onClick: () => removeRow(i),
+                        children: /* @__PURE__ */ jsx(Trash2, {
+                          className: "h-4 w-4 text-red-500"
                         })
-                      }), /* @__PURE__ */ jsx(SelectContent, {
-                        children: siteItems.map((si) => /* @__PURE__ */ jsx(SelectItem, {
-                          value: si.item._id,
-                          children: si.itemName
-                        }, si.item._id))
-                      })]
-                    }, `item-${siteItems.length}`)
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "text-center text-xs",
-                    children: row.unit || "-"
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "text-right text-slate-500",
-                    children: row.balanceQty
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Input, {
-                      type: "number",
-                      className: "h-8 text-right font-bold border-green-200",
-                      value: row.qtyOk,
-                      onChange: (e) => handleCalc(i, "qtyOk", e.target.value)
-                    })
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Input, {
-                      type: "number",
-                      className: "h-8 text-right font-bold border-red-200",
-                      value: row.qtyExchange,
-                      onChange: (e) => handleCalc(i, "qtyExchange", e.target.value)
-                    })
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Input, {
-                      type: "number",
-                      className: "h-8 text-right font-bold border-blue-200",
-                      value: row.qtyExcess,
-                      onChange: (e) => handleCalc(i, "qtyExcess", e.target.value)
-                    })
-                  }), /* @__PURE__ */ jsxs(TableCell, {
-                    className: "text-right text-xs",
-                    children: ["₹", row.rate]
-                  }), /* @__PURE__ */ jsxs(TableCell, {
-                    className: "text-right font-bold",
-                    children: ["₹", row.amount?.toFixed(2)]
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Trash2, {
-                      className: "h-4 w-4 text-red-500 cursor-pointer",
-                      onClick: () => removeRow(i)
-                    })
-                  })]
-                }, i))
+                      })
+                    })]
+                  }, i))
+                })]
+              }), !viewMode && !editingId && /* @__PURE__ */ jsx("div", {
+                className: "p-3 border-t flex justify-center bg-slate-50/50",
+                children: /* @__PURE__ */ jsxs(Button, {
+                  type: "button",
+                  variant: "outline",
+                  size: "sm",
+                  onClick: addRow,
+                  disabled: !watchSite,
+                  className: "border-dashed border-primary text-primary",
+                  children: [/* @__PURE__ */ jsx(Plus, {
+                    className: "mr-2 h-4 w-4"
+                  }), " Add Return Item"]
+                })
               })]
-            }), !editingId && /* @__PURE__ */ jsx("div", {
-              className: "p-2 border-t flex justify-center bg-slate-50 dark:bg-slate-900/50",
-              children: /* @__PURE__ */ jsxs(Button, {
-                type: "button",
-                variant: "outline",
-                size: "sm",
-                onClick: addRow,
-                disabled: !watchSite,
-                className: "border-dashed",
-                children: [/* @__PURE__ */ jsx(Plus, {
-                  className: "mr-2 h-4 w-4"
-                }), " Add Item"]
-              })
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "space-y-1",
+              children: [/* @__PURE__ */ jsx(Label, {
+                children: "Remark"
+              }), /* @__PURE__ */ jsx(Textarea, {
+                ...register2("remark"),
+                className: "h-16",
+                placeholder: "Notes regarding return condition..."
+              })]
             })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Remark"
-            }), /* @__PURE__ */ jsx(Textarea, {
-              ...register2("remark"),
-              className: "h-16"
-            })]
-          }), /* @__PURE__ */ jsx(DialogFooter, {
-            className: "flex justify-end gap-2",
-            children: /* @__PURE__ */ jsx(Button, {
-              type: "submit",
-              className: "bg-primary hover-card-glow",
-              children: editingId ? "Update Record" : "Save Record"
-            })
+          }), !viewMode && /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            className: "w-full bg-primary font-bold h-12 uppercase shadow-lg shadow-primary/20",
+            children: editingId ? "Update GRN Record" : "Save GRN Record"
           })]
         })]
       })
     }), /* @__PURE__ */ jsx("div", {
-      className: "grid gap-4 md:grid-cols-2 lg:grid-cols-4",
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
       children: grns.map((grn) => /* @__PURE__ */ jsx(Card, {
-        className: "hover-card-glow relative border-l-4 border-l-primary",
+        className: "overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 group bg-white dark:bg-slate-900",
         children: /* @__PURE__ */ jsxs(CardContent, {
-          className: "p-5",
-          children: [/* @__PURE__ */ jsx(Button, {
-            variant: "ghost",
-            size: "icon",
-            className: "absolute top-2 right-2 text-slate-400 hover:text-primary",
-            onClick: () => handleEdit(grn),
-            children: /* @__PURE__ */ jsx(Pencil, {
-              className: "h-4 w-4"
-            })
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "flex justify-between items-start mb-3",
+          className: "p-0",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "p-4 flex justify-between items-center border-b bg-green-50/50 dark:bg-green-900/10",
             children: [/* @__PURE__ */ jsx("span", {
-              className: "font-bold text-lg",
+              className: "font-black text-green-700 text-sm tracking-tight",
               children: grn.docNo
-            }), /* @__PURE__ */ jsx(Badge, {
-              variant: "outline",
-              className: "bg-green-50 text-green-700",
-              children: format(new Date(grn.date), "dd-MM-yyyy")
+            }), /* @__PURE__ */ jsx("span", {
+              className: "text-[11px] font-bold text-slate-500",
+              children: format(new Date(grn.date), "dd-MMM-yyyy")
             })]
           }), /* @__PURE__ */ jsxs("div", {
-            className: "text-sm space-y-1 text-slate-600 dark:text-slate-400",
+            className: "p-5 space-y-3",
             children: [/* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx(User, {
-                className: "h-3 w-3"
-              }), " ", grn.customer?.name]
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase mt-0.5",
+                children: "Customer:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-800 dark:text-slate-200 text-sm text-right truncate flex-1",
+                children: grn.customer?.name || "N/A"
+              })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx(MapPin, {
-                className: "h-3 w-3"
-              }), " ", grn.site?.name]
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase mt-0.5",
+                children: "Site:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-600 dark:text-slate-400 text-xs text-right truncate flex-1",
+                children: grn.site?.name || "-"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1 border-t border-dashed",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-xs text-slate-900 dark:text-white font-black uppercase",
+                children: "Items:"
+              }), /* @__PURE__ */ jsxs("span", {
+                className: "font-black text-green-600 text-sm",
+                children: [grn.items?.length || 0, " Types"]
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Status:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-primary text-[10px] uppercase bg-primary/5 px-2 py-0.5 rounded",
+                children: "Returned"
+              })]
             })]
-          }), /* @__PURE__ */ jsx("div", {
-            className: "mt-4 pt-3 border-t text-xs font-medium text-primary cursor-pointer hover:underline",
-            onClick: () => handleEdit(grn),
-            children: "View Details & Update"
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              onClick: () => handleView(grn),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Eye, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleEdit(grn),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-blue-500 hover:bg-blue-50 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleDownload(grn),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(CloudDownload, {
+                size: 18
+              })
+            })]
           })]
         })
       }, grn._id))
@@ -9088,18 +9420,18 @@ const rentalGrn = UNSAFE_withComponentProps(function RentalGRN() {
 const route24 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: rentalGrn,
-  meta: meta$4
+  meta: meta$8
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$3({}) {
+function meta$7({}) {
   return [{
-    title: "Missing Items - ScaffRent"
+    title: "Missing Material - ScaffRent"
   }];
 }
 const missSchema = z.object({
   date: z.string(),
   customer: z.string().min(1, "Select Customer"),
   site: z.string().min(1, "Select Site"),
-  referenceChallan: z.string().optional(),
+  referenceChallan: z.string().optional().or(z.literal("")),
   remark: z.string().optional()
 });
 const missingEntries = UNSAFE_withComponentProps(function MissingEntries() {
@@ -9111,6 +9443,7 @@ const missingEntries = UNSAFE_withComponentProps(function MissingEntries() {
   const [siteItems, setSiteItems] = useState([]);
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const {
     register: register2,
@@ -9162,7 +9495,7 @@ const missingEntries = UNSAFE_withComponentProps(function MissingEntries() {
     else setFilteredSites([]);
   }, [watchCustomer, sites2]);
   useEffect(() => {
-    if (watchSite) {
+    if (watchSite && !editingId) {
       const loadSiteData = async () => {
         const token = localStorage.getItem("token");
         const h = {
@@ -9178,33 +9511,11 @@ const missingEntries = UNSAFE_withComponentProps(function MissingEntries() {
         if (resChallans.ok) setSiteChallans(await resChallans.json());
       };
       loadSiteData();
-    } else {
-      setSiteItems([]);
-      setSiteChallans([]);
     }
-  }, [watchSite]);
-  const handleEdit = (entry2) => {
-    setEditingId(entry2._id);
-    setValue("date", entry2.date.split("T")[0]);
-    setValue("customer", entry2.customer?._id || "");
-    setValue("site", entry2.site?._id || "");
-    setValue("referenceChallan", entry2.referenceChallan?._id || "");
-    setValue("remark", entry2.remark);
-    const gridData = entry2.items.map((i) => ({
-      item: i.item,
-      itemCode: i.itemCode,
-      itemName: i.itemName,
-      unit: i.unit,
-      balanceQty: 0,
-      missingQty: i.missingQty,
-      rate: i.rate,
-      amount: i.amount
-    }));
-    setRows(gridData);
-    setOpen(true);
-  };
+  }, [watchSite, editingId]);
   const handleAdd = () => {
     setEditingId(null);
+    setViewMode(false);
     setRows([]);
     reset({
       date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
@@ -9214,6 +9525,36 @@ const missingEntries = UNSAFE_withComponentProps(function MissingEntries() {
       remark: ""
     });
     setOpen(true);
+  };
+  const handleEdit = (entry2) => {
+    setEditingId(entry2._id);
+    setViewMode(false);
+    reset({
+      date: entry2.date.split("T")[0],
+      customer: entry2.customer?._id || "",
+      site: entry2.site?._id || "",
+      referenceChallan: entry2.referenceChallan?._id || "",
+      remark: entry2.remark
+    });
+    setRows(entry2.items.map((i) => ({
+      item: i.item,
+      itemCode: i.itemCode,
+      itemName: i.itemName,
+      unit: i.unit,
+      balanceQty: 0,
+      missingQty: i.missingQty,
+      rate: i.rate,
+      amount: i.amount
+    })));
+    setOpen(true);
+  };
+  const handleView = (entry2) => {
+    handleEdit(entry2);
+    setViewMode(true);
+  };
+  const handleDownload = (entry2) => {
+    toast.info(`Generating report for ${entry2.docNo}...`);
+    window.print();
   };
   const addRow = () => setRows([...rows, {
     item: "",
@@ -9271,27 +9612,50 @@ const missingEntries = UNSAFE_withComponentProps(function MissingEntries() {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        toast.success("Saved!");
+        toast.success("Saved Successfully!");
         setOpen(false);
         fetchAll();
       }
     } catch (e) {
-      toast.error("Error");
+      toast.error("Error saving");
     }
   };
+  const fmt = (val) => new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR"
+  }).format(val);
   return /* @__PURE__ */ jsxs("div", {
     className: "space-y-6",
     children: [/* @__PURE__ */ jsxs("div", {
-      className: "flex justify-between items-center",
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
       children: [/* @__PURE__ */ jsx("h2", {
-        className: "text-2xl font-bold",
+        className: "text-xl font-bold text-slate-800 dark:text-white uppercase tracking-tight text-destructive",
         children: "Missing Material"
-      }), /* @__PURE__ */ jsxs(Button, {
-        onClick: handleAdd,
-        className: "bg-destructive hover-card-glow",
-        children: [/* @__PURE__ */ jsx(Plus, {
-          className: "mr-2 h-4 w-4"
-        }), " Report Missing"]
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search missing logs...",
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none"
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 text-primary border",
+          onClick: fetchAll,
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
+        }), /* @__PURE__ */ jsxs(Button, {
+          onClick: handleAdd,
+          className: "bg-destructive hover:bg-destructive/90 text-white h-10 px-6 font-bold shadow-md",
+          children: [/* @__PURE__ */ jsx(Plus, {
+            className: "mr-2 h-4 w-4"
+          }), " Add"]
+        })]
       })]
     }), /* @__PURE__ */ jsx(Dialog, {
       open,
@@ -9303,246 +9667,289 @@ const missingEntries = UNSAFE_withComponentProps(function MissingEntries() {
             className: "text-destructive flex items-center gap-2",
             children: [/* @__PURE__ */ jsx(AlertTriangle, {
               size: 20
-            }), " ", editingId ? "Edit" : "Report", " Loss"]
+            }), " ", viewMode ? "Loss Details" : editingId ? "Edit Loss Report" : "New Loss Report"]
           })
         }), /* @__PURE__ */ jsxs("form", {
           onSubmit: handleSubmit(onSubmit),
           className: "space-y-6 py-2",
-          children: [/* @__PURE__ */ jsxs("div", {
-            className: "grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-red-50 dark:bg-red-950/10 rounded-lg border border-red-100",
+          children: [/* @__PURE__ */ jsxs("fieldset", {
+            disabled: viewMode,
+            className: "space-y-6",
             children: [/* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Date"
-              }), /* @__PURE__ */ jsx(Input, {
-                type: "date",
-                ...register2("date")
+              className: "grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-red-50 dark:bg-red-950/10 rounded-lg border border-red-100",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Report Date"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "date",
+                  ...register2("date")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Customer"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "customer",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: c._id,
+                        children: c.name
+                      }, c._id))
+                    })]
+                  }, `cust-${customers2.length}`)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Site"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "site",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !watchCustomer || !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: s._id,
+                        children: s.name
+                      }, s._id))
+                    })]
+                  }, `site-${filteredSites.length}`)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "DC Reference"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "referenceChallan",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !watchSite || viewMode,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select DC"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: siteChallans.map((c) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: c._id,
+                        children: c.docNo
+                      }, c._id))
+                    })]
+                  }, `chl-${siteChallans.length}`)
+                })]
               })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Customer"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "customer",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  disabled: !!editingId,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: c._id,
-                      children: c.name
-                    }, c._id))
-                  })]
-                }, `cust-${customers2.length}`)
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Site"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "site",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  disabled: !watchCustomer || !!editingId,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: s._id,
-                      children: s.name
-                    }, s._id))
-                  })]
-                }, `site-${filteredSites.length}`)
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Against Challan Reference"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "referenceChallan",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  disabled: !watchSite,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select DC Reference"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: siteChallans.map((c) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: c._id,
-                      children: c.docNo
-                    }, c._id))
-                  })]
-                }, `chl-${siteChallans.length}`)
-              })]
-            })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "border rounded-md overflow-x-auto",
-            children: [/* @__PURE__ */ jsxs(Table, {
-              className: "min-w-[800px]",
-              children: [/* @__PURE__ */ jsx(TableHeader, {
-                children: /* @__PURE__ */ jsxs(TableRow, {
-                  className: "bg-slate-100 dark:bg-slate-800",
-                  children: [/* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[50px]",
-                    children: "Sr."
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    children: "Item (At Site)"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right",
-                    children: "Balance"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right font-bold text-destructive",
-                    children: "Missing Qty"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right text-xs",
-                    children: "Repl. Rate"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-right font-bold",
-                    children: "Total Loss"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[50px]"
-                  })]
-                })
-              }), /* @__PURE__ */ jsx(TableBody, {
-                children: rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
-                  children: [/* @__PURE__ */ jsx(TableCell, {
-                    className: "text-center",
-                    children: i + 1
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: editingId ? /* @__PURE__ */ jsx("span", {
-                      className: "text-sm font-medium",
-                      children: row.itemName
-                    }) : /* @__PURE__ */ jsxs(Select, {
-                      onValueChange: (v) => handleItemSelect(i, v),
-                      value: row.item,
-                      children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                        className: "h-8 min-w-[200px]",
-                        children: /* @__PURE__ */ jsx(SelectValue, {
-                          placeholder: "Select Item"
+              className: "border rounded-md overflow-x-auto",
+              children: [/* @__PURE__ */ jsxs(Table, {
+                className: "min-w-[800px]",
+                children: [/* @__PURE__ */ jsx(TableHeader, {
+                  children: /* @__PURE__ */ jsxs(TableRow, {
+                    className: "bg-slate-100 dark:bg-slate-800",
+                    children: [/* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[50px]",
+                      children: "Sr."
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Item (At Site)"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Balance"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right font-bold text-destructive",
+                      children: "Missing Qty"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Repl. Rate"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Total Loss"
+                    }), !viewMode && /* @__PURE__ */ jsx(TableHead, {
+                      className: "w-[40px]"
+                    })]
+                  })
+                }), /* @__PURE__ */ jsx(TableBody, {
+                  children: rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
+                    children: [/* @__PURE__ */ jsx(TableCell, {
+                      className: "text-center font-bold text-slate-400",
+                      children: i + 1
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: editingId ? /* @__PURE__ */ jsx("span", {
+                        className: "text-sm font-medium",
+                        children: row.itemName
+                      }) : /* @__PURE__ */ jsxs(Select, {
+                        onValueChange: (v) => handleItemSelect(i, v),
+                        value: row.item,
+                        children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                          className: "h-8 min-w-[200px]",
+                          children: /* @__PURE__ */ jsx(SelectValue, {
+                            placeholder: "Item"
+                          })
+                        }), /* @__PURE__ */ jsx(SelectContent, {
+                          children: siteItems.map((si) => /* @__PURE__ */ jsx(SelectItem, {
+                            value: si.item._id,
+                            children: si.itemName
+                          }, si.item._id))
+                        })]
+                      }, siteItems.length)
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      className: "text-right text-slate-500",
+                      children: row.balanceQty
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "h-8 text-right font-bold text-destructive border-red-200",
+                        value: row.missingQty,
+                        onChange: (e) => handleCalc(i, e.target.value)
+                      })
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right text-xs",
+                      children: ["₹", row.rate]
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right font-bold",
+                      children: ["₹", row.amount?.toFixed(2)]
+                    }), !viewMode && /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Button, {
+                        variant: "ghost",
+                        size: "icon",
+                        onClick: () => removeRow(i),
+                        children: /* @__PURE__ */ jsx(Trash2, {
+                          className: "h-4 w-4 text-red-500"
                         })
-                      }), /* @__PURE__ */ jsx(SelectContent, {
-                        children: siteItems.map((si) => /* @__PURE__ */ jsx(SelectItem, {
-                          value: si.item._id,
-                          children: si.itemName
-                        }, si.item._id))
-                      })]
-                    }, `item-${siteItems.length}`)
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "text-right text-slate-500",
-                    children: row.balanceQty
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Input, {
-                      type: "number",
-                      className: "h-8 text-right font-bold text-destructive border-red-200",
-                      value: row.missingQty,
-                      onChange: (e) => handleCalc(i, e.target.value)
-                    })
-                  }), /* @__PURE__ */ jsxs(TableCell, {
-                    className: "text-right text-xs",
-                    children: ["₹", row.rate]
-                  }), /* @__PURE__ */ jsxs(TableCell, {
-                    className: "text-right font-bold",
-                    children: ["₹", row.amount?.toFixed(2)]
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Trash2, {
-                      className: "h-4 w-4 text-red-500 cursor-pointer",
-                      onClick: () => removeRow(i)
-                    })
-                  })]
-                }, i))
+                      })
+                    })]
+                  }, i))
+                })]
+              }), !viewMode && !editingId && /* @__PURE__ */ jsx("div", {
+                className: "p-3 border-t flex justify-center bg-slate-50/50",
+                children: /* @__PURE__ */ jsxs(Button, {
+                  type: "button",
+                  variant: "outline",
+                  size: "sm",
+                  onClick: addRow,
+                  disabled: !watchSite,
+                  className: "border-dashed border-destructive text-destructive",
+                  children: [/* @__PURE__ */ jsx(Plus, {
+                    className: "mr-2 h-4 w-4"
+                  }), " Add Item"]
+                })
               })]
-            }), !editingId && /* @__PURE__ */ jsx("div", {
-              className: "p-2 border-t flex justify-center",
-              children: /* @__PURE__ */ jsxs(Button, {
-                type: "button",
-                variant: "outline",
-                size: "sm",
-                onClick: addRow,
-                disabled: !watchSite,
-                className: "border-dashed",
-                children: [/* @__PURE__ */ jsx(Plus, {
-                  className: "mr-2 h-4 w-4"
-                }), " Add Item"]
-              })
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "space-y-1",
+              children: [/* @__PURE__ */ jsx(Label, {
+                children: "Remark / Cause"
+              }), /* @__PURE__ */ jsx(Textarea, {
+                ...register2("remark"),
+                className: "h-16",
+                placeholder: "Reason for loss..."
+              })]
             })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              children: "Remark"
-            }), /* @__PURE__ */ jsx(Textarea, {
-              ...register2("remark"),
-              placeholder: "Reason for loss..."
-            })]
-          }), /* @__PURE__ */ jsx(DialogFooter, {
-            className: "flex justify-end gap-2",
-            children: /* @__PURE__ */ jsx(Button, {
-              type: "submit",
-              className: "bg-destructive hover:bg-destructive/90 px-6",
-              children: editingId ? "Update Entry" : "Save Entry"
-            })
+          }), !viewMode && /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            className: "w-full bg-destructive font-bold h-12 uppercase shadow-lg shadow-red-500/20",
+            children: editingId ? "Update Loss Record" : "Save Loss Record"
           })]
         })]
       })
     }), /* @__PURE__ */ jsx("div", {
-      className: "grid gap-4 md:grid-cols-2 lg:grid-cols-4",
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
       children: missingEntries2.map((m) => /* @__PURE__ */ jsx(Card, {
-        className: "hover-card-glow relative border-l-4 border-l-destructive",
+        className: "overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 group bg-white dark:bg-slate-900",
         children: /* @__PURE__ */ jsxs(CardContent, {
-          className: "p-5",
-          children: [/* @__PURE__ */ jsx(Button, {
-            variant: "ghost",
-            size: "icon",
-            className: "absolute top-2 right-2 text-slate-400 hover:text-destructive",
-            onClick: () => handleEdit(m),
-            children: /* @__PURE__ */ jsx(Pencil, {
-              className: "h-4 w-4"
-            })
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "flex justify-between items-start mb-3",
+          className: "p-0",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "p-4 flex justify-between items-center border-b bg-red-50/50 dark:bg-red-900/10",
             children: [/* @__PURE__ */ jsx("span", {
-              className: "font-bold text-lg",
+              className: "font-black text-red-700 text-sm tracking-tight uppercase",
               children: m.docNo
-            }), /* @__PURE__ */ jsx(Badge, {
-              variant: "outline",
-              className: "bg-red-50 text-red-700",
-              children: format(new Date(m.date), "dd-MM-yyyy")
+            }), /* @__PURE__ */ jsx("span", {
+              className: "text-[11px] font-bold text-slate-500",
+              children: format(new Date(m.date), "dd-MMM-yyyy")
             })]
           }), /* @__PURE__ */ jsxs("div", {
-            className: "text-sm space-y-1 text-slate-600 dark:text-slate-400",
+            className: "p-5 space-y-3 text-sm",
             children: [/* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx(User, {
-                className: "h-3 w-3"
-              }), " ", m.customer?.name]
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Customer:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-800 dark:text-slate-200 text-right truncate flex-1",
+                children: m.customer?.name || "N/A"
+              })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx(MapPin, {
-                className: "h-3 w-3"
-              }), " ", m.site?.name]
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Site:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-medium text-slate-600 dark:text-slate-400 text-right truncate flex-1",
+                children: m.site?.name || "-"
+              })]
+            }), /* @__PURE__ */ jsx(Separator, {
+              className: "opacity-50"
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-900 dark:text-white font-black uppercase",
+                children: "Total Loss:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-red-600 text-base",
+                children: fmt(m.items?.reduce((acc, i) => acc + (i.amount || 0), 0))
+              })]
             }), m.referenceChallan && /* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2 text-destructive font-medium bg-red-50 w-fit px-2 py-0.5 rounded text-[10px] mt-2",
+              className: "flex items-center gap-2 text-destructive font-black bg-red-50 dark:bg-red-950/30 w-fit px-2 py-0.5 rounded text-[10px]",
               children: [/* @__PURE__ */ jsx(Link, {
                 size: 10
               }), " Ref: ", m.referenceChallan.docNo]
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              onClick: () => handleView(m),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Eye, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleEdit(m),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-blue-500 hover:bg-blue-50 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleDownload(m),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(CloudDownload, {
+                size: 18
+              })
             })]
           })]
         })
@@ -9553,9 +9960,9 @@ const missingEntries = UNSAFE_withComponentProps(function MissingEntries() {
 const route25 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: missingEntries,
-  meta: meta$3
+  meta: meta$7
 }, Symbol.toStringTag, { value: "Module" }));
-function meta$2({}) {
+function meta$6({}) {
   return [{
     title: "Extra Item Adjustment - ScaffRent"
   }];
@@ -9570,8 +9977,8 @@ const adjSchema = z.object({
 const adjustments = UNSAFE_withComponentProps(function Adjustments() {
   const [customers2, setCustomers] = useState([]);
   const [sites2, setSites] = useState([]);
-  const [filteredSites, setFilteredSites] = useState([]);
   const [adjustments2, setAdjustments] = useState([]);
+  const [filteredSites, setFilteredSites] = useState([]);
   const [excessPool, setExcessPool] = useState([]);
   const [siteChallans, setSiteChallans] = useState([]);
   const [challanItems, setChallanItems] = useState([]);
@@ -9580,6 +9987,7 @@ const adjustments = UNSAFE_withComponentProps(function Adjustments() {
   const [adjustQty, setAdjustQty] = useState(0);
   const [stagedRows, setStagedRows] = useState([]);
   const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const {
     register: register2,
@@ -9601,7 +10009,7 @@ const adjustments = UNSAFE_withComponentProps(function Adjustments() {
   const watchCustomer = watch("customer");
   const watchSite = watch("site");
   const watchChallan = watch("referenceChallan");
-  const fetchAll = async () => {
+  const fetchInitial = async () => {
     const token = localStorage.getItem("token");
     const h = {
       "Authorization": `Bearer ${token}`
@@ -9622,11 +10030,10 @@ const adjustments = UNSAFE_withComponentProps(function Adjustments() {
     }
   };
   useEffect(() => {
-    fetchAll();
+    fetchInitial();
   }, []);
   useEffect(() => {
     if (watchCustomer) setFilteredSites(sites2.filter((s) => s.customer?._id === watchCustomer));
-    else setFilteredSites([]);
   }, [watchCustomer, sites2]);
   useEffect(() => {
     if (watchSite && !editingId) {
@@ -9636,67 +10043,24 @@ const adjustments = UNSAFE_withComponentProps(function Adjustments() {
       };
       fetch(`/api/store/excess-pool?siteId=${watchSite}`, {
         headers: h
-      }).then((r) => r.json()).then((d) => setExcessPool(Array.isArray(d) ? d : []));
-      fetch(`api/store/challans-by-site?siteId=${watchSite}`, {
+      }).then((r) => r.json()).then((d) => setExcessPool(d));
+      fetch(`/api/store/challans-by-site?siteId=${watchSite}`, {
         headers: h
-      }).then((r) => r.json()).then((d) => setSiteChallans(Array.isArray(d) ? d : []));
-    } else if (!editingId) {
-      setExcessPool([]);
-      setSiteChallans([]);
+      }).then((r) => r.json()).then((d) => setSiteChallans(d));
     }
   }, [watchSite, editingId]);
   useEffect(() => {
     if (watchChallan && !editingId) {
-      const token = localStorage.getItem("token");
       fetch(`/api/store/challan-items?challanId=${watchChallan}`, {
         headers: {
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
         }
-      }).then((r) => r.json()).then((d) => setChallanItems(Array.isArray(d) ? d : []));
-    } else {
-      setChallanItems([]);
+      }).then((r) => r.json()).then((d) => setChallanItems(d));
     }
   }, [watchChallan, editingId]);
-  const handleStage = () => {
-    if (!selectedExcess || !selectedTarget || adjustQty <= 0) return toast.error("Invalid Selection");
-    if (adjustQty > selectedExcess.balance) return toast.error(`Max Excess available: ${selectedExcess.balance}`);
-    setStagedRows([...stagedRows, {
-      excessItem: selectedExcess.id,
-      excessItemName: selectedExcess.name,
-      excessItemCode: selectedExcess.code,
-      challanItem: selectedTarget.id,
-      challanItemName: selectedTarget.name,
-      challanItemCode: selectedTarget.code,
-      adjustedQty: adjustQty
-    }]);
-    setSelectedExcess(null);
-    setSelectedTarget(null);
-    setAdjustQty(0);
-  };
-  const removeRow = (index) => {
-    const n = [...stagedRows];
-    n.splice(index, 1);
-    setStagedRows(n);
-  };
-  const handleEdit = (adj) => {
-    setEditingId(adj._id);
-    setValue("date", adj.date.split("T")[0]);
-    setValue("customer", adj.customer?._id || "");
-    setValue("site", adj.site?._id || "");
-    setValue("referenceChallan", adj.referenceChallan?._id || "");
-    setValue("remark", adj.remark);
-    const rows = adj.adjustments?.map((a) => ({
-      excessItem: a.excessItem,
-      excessItemName: a.excessItemName,
-      challanItem: a.challanItem,
-      challanItemName: a.challanItemName,
-      adjustedQty: a.adjustedQty
-    })) || [];
-    setStagedRows(rows);
-    setOpen(true);
-  };
   const handleAdd = () => {
     setEditingId(null);
+    setViewMode(false);
     setStagedRows([]);
     reset({
       date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
@@ -9707,10 +10071,684 @@ const adjustments = UNSAFE_withComponentProps(function Adjustments() {
     });
     setOpen(true);
   };
+  const handleEdit = (adj) => {
+    setEditingId(adj._id);
+    setViewMode(false);
+    reset({
+      date: adj.date.split("T")[0],
+      customer: adj.customer?._id,
+      site: adj.site?._id,
+      referenceChallan: adj.referenceChallan?._id,
+      remark: adj.remark
+    });
+    setStagedRows(adj.adjustments || []);
+    setOpen(true);
+  };
+  const handleView = (adj) => {
+    handleEdit(adj);
+    setViewMode(true);
+  };
+  const handleStage = () => {
+    if (!selectedExcess || !selectedTarget || adjustQty <= 0) return toast.error("Invalid Selection");
+    if (adjustQty > selectedExcess.balance) return toast.error("Qty exceeds excess balance");
+    setStagedRows([...stagedRows, {
+      excessItem: selectedExcess.id,
+      excessItemName: selectedExcess.name,
+      challanItem: selectedTarget.id,
+      challanItemName: selectedTarget.name,
+      adjustedQty: adjustQty
+    }]);
+    setSelectedExcess(null);
+    setSelectedTarget(null);
+    setAdjustQty(0);
+  };
+  const removeRow = (idx) => {
+    const n = [...stagedRows];
+    n.splice(idx, 1);
+    setStagedRows(n);
+  };
   const onSubmit = async (data) => {
-    if (stagedRows.length === 0) return toast.error("No adjustments staged");
-    const token = localStorage.getItem("token");
     const url = editingId ? `/api/store/adjustments/${editingId}` : "/api/store/adjustments";
+    const method = editingId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
+      body: JSON.stringify({
+        ...data,
+        adjustments: stagedRows
+      })
+    });
+    if (res.ok) {
+      toast.success("Saved!");
+      setOpen(false);
+      fetchInitial();
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", {
+    className: "space-y-6",
+    children: [/* @__PURE__ */ jsxs("div", {
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
+      children: [/* @__PURE__ */ jsx("h2", {
+        className: "text-xl font-bold text-slate-800 dark:text-white uppercase tracking-tight",
+        children: "Item Adjustments"
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search logs...",
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none"
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 border",
+          onClick: fetchInitial,
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
+        }), /* @__PURE__ */ jsxs(Button, {
+          onClick: handleAdd,
+          className: "bg-[#2196F3] hover:bg-[#1976D2] text-white h-10 px-6 font-bold shadow-md",
+          children: [/* @__PURE__ */ jsx(Plus, {
+            className: "mr-2 h-4 w-4"
+          }), " Add"]
+        })]
+      })]
+    }), /* @__PURE__ */ jsx(Dialog, {
+      open,
+      onOpenChange: setOpen,
+      children: /* @__PURE__ */ jsxs(DialogContent, {
+        className: "sm:max-w-[900px] max-h-[95vh] overflow-y-auto",
+        children: [/* @__PURE__ */ jsx(DialogHeader, {
+          children: /* @__PURE__ */ jsx(DialogTitle, {
+            children: viewMode ? "Adjustment Details" : editingId ? "Edit Adjustment" : "New Item Adjustment"
+          })
+        }), /* @__PURE__ */ jsxs("form", {
+          onSubmit: handleSubmit(onSubmit),
+          className: "space-y-6 py-2",
+          children: [/* @__PURE__ */ jsxs("fieldset", {
+            disabled: viewMode,
+            className: "space-y-6",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Date"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "date",
+                  ...register2("date")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Customer"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "customer",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: c._id,
+                        children: c.name
+                      }, c._id))
+                    })]
+                  }, customers2.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Site"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "site",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !watchCustomer || !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: s._id,
+                        children: s.name
+                      }, s._id))
+                    })]
+                  }, filteredSites.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Against Delivery Challan"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "referenceChallan",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !watchSite || !!editingId,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select DC"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: siteChallans.map((c) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: c._id,
+                        children: c.docNo
+                      }, c._id))
+                    })]
+                  }, siteChallans.length)
+                })]
+              })]
+            }), watchChallan && !editingId && /* @__PURE__ */ jsxs("div", {
+              className: "bg-primary/5 p-4 rounded-lg border border-primary/20 grid grid-cols-1 md:grid-cols-2 gap-4 items-end",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  className: "text-green-600 font-bold",
+                  children: "Select Excess Item (Source)"
+                }), /* @__PURE__ */ jsxs(Select, {
+                  onValueChange: (v) => setSelectedExcess(excessPool.find((e) => e.id === v)),
+                  value: selectedExcess?.id || "",
+                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                    className: "bg-white",
+                    children: /* @__PURE__ */ jsx(SelectValue, {
+                      placeholder: "Available Excess"
+                    })
+                  }), /* @__PURE__ */ jsx(SelectContent, {
+                    children: excessPool.map((e) => /* @__PURE__ */ jsxs(SelectItem, {
+                      value: e.id,
+                      children: [e.name, " (Bal: ", e.balance, ")"]
+                    }, e.id))
+                  })]
+                }, excessPool.length)]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  className: "text-slate-700 font-bold",
+                  children: "Select Challan Item (Target)"
+                }), /* @__PURE__ */ jsxs(Select, {
+                  onValueChange: (v) => setSelectedTarget(challanItems.find((i) => i.id === v)),
+                  value: selectedTarget?.id || "",
+                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                    className: "bg-white",
+                    children: /* @__PURE__ */ jsx(SelectValue, {
+                      placeholder: "Item in DC"
+                    })
+                  }), /* @__PURE__ */ jsx(SelectContent, {
+                    children: challanItems.map((i) => /* @__PURE__ */ jsxs(SelectItem, {
+                      value: i.id,
+                      children: [i.name, " (Sent: ", i.currentQty, ")"]
+                    }, i.id))
+                  })]
+                }, challanItems.length)]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "md:col-span-2 flex gap-2 justify-end",
+                children: [/* @__PURE__ */ jsx("div", {
+                  className: "w-32",
+                  children: /* @__PURE__ */ jsx(Input, {
+                    type: "number",
+                    value: adjustQty,
+                    onChange: (e) => setAdjustQty(Number(e.target.value)),
+                    className: "bg-white"
+                  })
+                }), /* @__PURE__ */ jsxs(Button, {
+                  type: "button",
+                  onClick: handleStage,
+                  className: "bg-slate-900",
+                  children: [/* @__PURE__ */ jsx(ArrowRightLeft, {
+                    className: "mr-2 h-4 w-4"
+                  }), " Add Swap"]
+                })]
+              })]
+            }), /* @__PURE__ */ jsx("div", {
+              className: "border rounded-md overflow-hidden",
+              children: /* @__PURE__ */ jsxs(Table, {
+                children: [/* @__PURE__ */ jsx(TableHeader, {
+                  children: /* @__PURE__ */ jsxs(TableRow, {
+                    className: "bg-slate-100 dark:bg-slate-800 text-xs",
+                    children: [/* @__PURE__ */ jsx(TableHead, {
+                      children: "Excess (Source)"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Challan Item (Target)"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Qty"
+                    }), !viewMode && /* @__PURE__ */ jsx(TableHead, {})]
+                  })
+                }), /* @__PURE__ */ jsx(TableBody, {
+                  children: stagedRows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
+                    children: [/* @__PURE__ */ jsx(TableCell, {
+                      className: "font-medium text-green-700",
+                      children: row.excessItemName
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      className: "font-medium text-slate-700 dark:text-slate-300",
+                      children: row.challanItemName
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right font-black",
+                      children: ["+", row.adjustedQty]
+                    }), !viewMode && /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Button, {
+                        variant: "ghost",
+                        size: "icon",
+                        onClick: () => removeRow(i),
+                        children: /* @__PURE__ */ jsx(Trash2, {
+                          className: "h-4 w-4 text-red-500"
+                        })
+                      })
+                    })]
+                  }, i))
+                })]
+              })
+            })]
+          }), !viewMode && /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            className: "w-full bg-[#2196F3] font-bold h-12 uppercase",
+            children: "Save Adjustment"
+          })]
+        })]
+      })
+    }), /* @__PURE__ */ jsx("div", {
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+      children: adjustments2.map((adj) => /* @__PURE__ */ jsx(Card, {
+        className: "overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 group bg-white dark:bg-slate-900",
+        children: /* @__PURE__ */ jsxs(CardContent, {
+          className: "p-0",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "p-4 flex justify-between items-center border-b bg-slate-50/50 dark:bg-slate-800/50",
+            children: [/* @__PURE__ */ jsx("span", {
+              className: "font-black text-slate-800 dark:text-white text-sm tracking-tight",
+              children: adj.docNo
+            }), /* @__PURE__ */ jsx("span", {
+              className: "text-[11px] font-bold text-slate-500",
+              children: format(new Date(adj.date), "dd-MMM-yyyy")
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "p-5 space-y-3 text-sm",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-start gap-2 text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase",
+                children: "Customer:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-800 dark:text-slate-200 text-right truncate flex-1",
+                children: adj.customer?.name
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-start gap-2 text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase",
+                children: "Site:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-medium text-slate-600 dark:text-slate-400 text-right truncate flex-1",
+                children: adj.site?.name
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-400 font-bold uppercase",
+                children: "Ref DC:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-primary uppercase",
+                children: adj.referenceChallan?.docNo || "N/A"
+              })]
+            }), /* @__PURE__ */ jsx(Separator, {
+              className: "opacity-50"
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1 text-xs",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-slate-900 dark:text-white font-black uppercase",
+                children: "Swaps:"
+              }), /* @__PURE__ */ jsxs("span", {
+                className: "font-black text-primary",
+                children: [adj.adjustments?.length || 0, " Items"]
+              })]
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "text-indigo-600",
+              onClick: () => handleView(adj),
+              children: /* @__PURE__ */ jsx(Eye, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "text-blue-500",
+              onClick: () => handleEdit(adj),
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "text-emerald-600",
+              onClick: () => toast.info("Printing..."),
+              children: /* @__PURE__ */ jsx(CloudDownload, {
+                size: 18
+              })
+            })]
+          })]
+        })
+      }, adj._id))
+    })]
+  });
+});
+const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: adjustments,
+  meta: meta$6
+}, Symbol.toStringTag, { value: "Module" }));
+const styles = StyleSheet.create({
+  page: { padding: 40, fontSize: 10, color: "#334155" },
+  header: { flexDirection: "row", justifyContent: "space-between", borderBottom: 2, paddingBottom: 10, marginBottom: 20 },
+  brandTitle: { fontSize: 20, fontWeight: "bold", color: "#0f172a" },
+  docTitle: { fontSize: 14, fontWeight: "bold", textTransform: "uppercase", marginTop: 5 },
+  section: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20 },
+  addressBox: { width: "45%" },
+  label: { fontSize: 8, color: "#64748b", fontWeight: "bold", textTransform: "uppercase", marginBottom: 2 },
+  value: { fontSize: 10, marginBottom: 5 },
+  table: { display: "flex", width: "auto", borderStyle: "solid", borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 4 },
+  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderColor: "#e2e8f0", minHeight: 25, alignItems: "center" },
+  tableHeader: { backgroundColor: "#f8fafc", fontWeight: "bold" },
+  col1: { width: "10%", paddingLeft: 5 },
+  col2: { width: "40%", paddingLeft: 5 },
+  col3: { width: "15%", textAlign: "center" },
+  col4: { width: "15%", textAlign: "right", paddingRight: 5 },
+  col5: { width: "20%", textAlign: "right", paddingRight: 10 },
+  footer: { flexDirection: "row", justifyContent: "space-between", marginTop: 30 },
+  totalsBox: { width: "40%", borderTop: 1, borderColor: "#e2e8f0", paddingTop: 10 },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  grandTotal: { fontSize: 12, fontWeight: "bold", borderTop: 1, paddingTop: 5, marginTop: 5 },
+  signatureArea: { flexDirection: "row", justifyContent: "space-between", marginTop: 50 },
+  sigLine: { width: 150, borderTop: 1, borderColor: "#94a3b8", textAlign: "center", paddingTop: 5, fontSize: 8 }
+});
+const UniversalPDF = ({ data, type, company: company2 }) => {
+  const items2 = data?.items || [];
+  const themeColor = type === "SALE" ? "#ea580c" : "#2196F3";
+  return /* @__PURE__ */ jsx(Document, { children: /* @__PURE__ */ jsxs(Page, { size: "A4", style: styles.page, children: [
+    /* @__PURE__ */ jsxs(View, { style: [styles.header, { borderBottomColor: themeColor }], children: [
+      /* @__PURE__ */ jsxs(View, { children: [
+        /* @__PURE__ */ jsx(Text, { style: styles.brandTitle, children: company2?.name || "SCAFFRENT" }),
+        /* @__PURE__ */ jsx(Text, { style: { fontSize: 8 }, children: company2?.billingAddress || "Address not set" }),
+        /* @__PURE__ */ jsxs(Text, { style: { fontSize: 8 }, children: [
+          "GST: ",
+          company2?.gstn || "-",
+          " | PAN: ",
+          company2?.pan || "-"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs(View, { style: { textAlign: "right" }, children: [
+        /* @__PURE__ */ jsx(Text, { style: [styles.docTitle, { color: themeColor }], children: data?.docType || "Document" }),
+        /* @__PURE__ */ jsx(Text, { style: { fontWeight: "bold" }, children: data?.docNo || "-" }),
+        /* @__PURE__ */ jsxs(Text, { style: { fontSize: 8 }, children: [
+          "Date: ",
+          data?.date ? new Date(data.date).toLocaleDateString() : "-"
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs(View, { style: styles.section, children: [
+      /* @__PURE__ */ jsxs(View, { style: styles.addressBox, children: [
+        /* @__PURE__ */ jsx(Text, { style: styles.label, children: "Bill To:" }),
+        /* @__PURE__ */ jsx(Text, { style: { fontWeight: "bold" }, children: data?.customer?.name || data?.supplier?.name || "Walk-in Customer" }),
+        /* @__PURE__ */ jsx(Text, { style: { fontSize: 9 }, children: data?.billingAddress || "No Address Provided" })
+      ] }),
+      /* @__PURE__ */ jsxs(View, { style: styles.addressBox, children: [
+        /* @__PURE__ */ jsx(Text, { style: styles.label, children: "Logistics Details:" }),
+        /* @__PURE__ */ jsxs(Text, { style: { fontSize: 9 }, children: [
+          "Site: ",
+          data?.site?.name || "N/A"
+        ] }),
+        /* @__PURE__ */ jsxs(Text, { style: { fontSize: 9 }, children: [
+          "Vehicle: ",
+          data?.vehicleNo || "-"
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs(View, { style: styles.table, children: [
+      /* @__PURE__ */ jsxs(View, { style: [styles.tableRow, styles.tableHeader], children: [
+        /* @__PURE__ */ jsx(Text, { style: styles.col1, children: "Sr." }),
+        /* @__PURE__ */ jsx(Text, { style: styles.col2, children: "Item Description" }),
+        /* @__PURE__ */ jsx(Text, { style: styles.col3, children: "Qty" }),
+        /* @__PURE__ */ jsx(Text, { style: styles.col4, children: "Rate" }),
+        /* @__PURE__ */ jsx(Text, { style: styles.col5, children: "Total" })
+      ] }),
+      items2.map((row, i) => /* @__PURE__ */ jsxs(View, { style: styles.tableRow, children: [
+        /* @__PURE__ */ jsx(Text, { style: styles.col1, children: i + 1 }),
+        /* @__PURE__ */ jsx(Text, { style: styles.col2, children: row.itemName || row.item?.name || "Unknown Item" }),
+        /* @__PURE__ */ jsx(Text, { style: styles.col3, children: row.quantity || row.currentQty || 0 }),
+        /* @__PURE__ */ jsx(Text, { style: styles.col4, children: (row.rate || 0).toFixed(2) }),
+        /* @__PURE__ */ jsx(Text, { style: styles.col5, children: (row.amount || 0).toFixed(2) })
+      ] }, i))
+    ] }),
+    /* @__PURE__ */ jsxs(View, { style: styles.footer, children: [
+      /* @__PURE__ */ jsxs(View, { style: { width: "50%" }, children: [
+        /* @__PURE__ */ jsx(Text, { style: styles.label, children: "Remarks:" }),
+        /* @__PURE__ */ jsx(Text, { style: { fontSize: 8 }, children: data?.remark || "Thank you for your business." })
+      ] }),
+      /* @__PURE__ */ jsxs(View, { style: styles.totalsBox, children: [
+        /* @__PURE__ */ jsxs(View, { style: styles.totalRow, children: [
+          /* @__PURE__ */ jsx(Text, { children: "Sub Total" }),
+          /* @__PURE__ */ jsxs(Text, { children: [
+            "₹",
+            (data?.subTotal || 0).toFixed(2)
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs(View, { style: styles.totalRow, children: [
+          /* @__PURE__ */ jsx(Text, { children: "Tax Amount" }),
+          /* @__PURE__ */ jsxs(Text, { children: [
+            "₹",
+            (data?.taxAmount || 0).toFixed(2)
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxs(View, { style: [styles.totalRow, styles.grandTotal, { color: themeColor }], children: [
+          /* @__PURE__ */ jsx(Text, { children: "GRAND TOTAL" }),
+          /* @__PURE__ */ jsxs(Text, { children: [
+            "₹",
+            (data?.grandTotal || 0).toFixed(2)
+          ] })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs(View, { style: styles.signatureArea, children: [
+      /* @__PURE__ */ jsx(View, { style: styles.sigLine, children: /* @__PURE__ */ jsx(Text, { children: "Customer Signature" }) }),
+      /* @__PURE__ */ jsx(View, { style: styles.sigLine, children: /* @__PURE__ */ jsx(Text, { children: "Authorized Signatory" }) })
+    ] })
+  ] }) });
+};
+function PDFViewerDialog({ open, onOpenChange, data, type }) {
+  const [company2, setCompany] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (open) {
+      setLoading(true);
+      fetch("/api/company", { headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` } }).then((r) => r.json()).then((d) => {
+        setCompany(d);
+        setLoading(false);
+      }).catch(() => setLoading(false));
+    }
+  }, [open]);
+  const isDataReady = data && data.docNo;
+  return /* @__PURE__ */ jsx(Dialog, { open, onOpenChange, children: /* @__PURE__ */ jsxs(DialogContent, { className: "max-w-[100vw] sm:max-w-[90vw] h-[95vh] p-0 overflow-hidden border-none shadow-2xl bg-slate-900", children: [
+    /* @__PURE__ */ jsx(DialogHeader, { className: "p-4 bg-white dark:bg-slate-950 border-b flex flex-row items-center justify-between", children: /* @__PURE__ */ jsx(DialogTitle, { className: "text-lg font-bold", children: isDataReady ? `Preview: ${data.docNo}` : "Generating Document..." }) }),
+    /* @__PURE__ */ jsx("div", { className: "relative w-full h-full bg-slate-800", children: loading || !isDataReady ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col h-full items-center justify-center text-white space-y-4", children: [
+      /* @__PURE__ */ jsx(Loader2, { className: "animate-spin h-10 w-10 text-primary" }),
+      /* @__PURE__ */ jsx("p", { className: "text-sm font-medium animate-pulse", children: "Building PDF Structure..." })
+    ] }) : /* @__PURE__ */ jsx(PDFViewer, { width: "100%", height: "100%", showToolbar: true, className: "border-none", children: /* @__PURE__ */ jsx(UniversalPDF, { data, type, company: company2 }) }) })
+  ] }) });
+}
+function meta$5({}) {
+  return [{
+    title: "Sales Invoice - ScaffRent"
+  }];
+}
+const invoiceSchema = z.object({
+  date: z.string().min(1, "Date required"),
+  customer: z.string().min(1, "Select Customer"),
+  site: z.string().optional(),
+  referenceDC: z.string().min(1, "Select Delivery Challan"),
+  taxCode: z.string().min(1, "Select Tax Scheme"),
+  transportCharges: z.coerce.number().min(0),
+  loadingCharges: z.coerce.number().min(0)
+});
+const salesInvoice = UNSAFE_withComponentProps(function SalesInvoicePage() {
+  const [customers2, setCustomers] = useState([]);
+  const [taxCodes2, setTaxCodes] = useState([]);
+  const [pendingDCs, setPendingDCs] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [selectedForPdf, setSelectedForPdf] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const {
+    register: register2,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: {
+      errors,
+      isSubmitting
+    }
+  } = useForm({
+    resolver: zodResolver(invoiceSchema),
+    defaultValues: {
+      date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
+      customer: "",
+      site: "",
+      referenceDC: "",
+      taxCode: "",
+      transportCharges: 0,
+      loadingCharges: 0
+    }
+  });
+  const watchCustomer = watch("customer");
+  const watchDC = watch("referenceDC");
+  const watchTax = watch("taxCode");
+  const watchTransport = watch("transportCharges");
+  const watchLoading = watch("loadingCharges");
+  const fetchInitial = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    const h = {
+      "Authorization": `Bearer ${token}`
+    };
+    try {
+      const [c, t, inv] = await Promise.all([fetch("/api/masters/customers", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/tax-codes", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/sales/invoices", {
+        headers: h
+      }).then((r) => r.json())]);
+      setCustomers(Array.isArray(c) ? c : []);
+      setTaxCodes(Array.isArray(t) ? t : []);
+      setInvoices(inv.data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+  useEffect(() => {
+    fetchInitial();
+  }, [fetchInitial]);
+  useEffect(() => {
+    if (watchCustomer && !editingId) {
+      const token = localStorage.getItem("token");
+      fetch(`/api/sales/pending-dcs?customerId=${watchCustomer}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      }).then((r) => r.json()).then((data) => setPendingDCs(Array.isArray(data) ? data : []));
+    }
+  }, [watchCustomer, editingId]);
+  useEffect(() => {
+    if (watchDC && !editingId) {
+      const dc = pendingDCs.find((d) => d._id === watchDC);
+      if (dc) {
+        const grid = dc.items.map((i) => ({
+          item: i.item._id || i.item,
+          itemName: i.itemName,
+          unit: i.unit,
+          quantity: i.currentQty,
+          rate: i.rate || 0,
+          amount: i.currentQty * (i.rate || 0)
+        }));
+        setRows(grid);
+        if (dc.site) setValue("site", dc.site._id || dc.site);
+      }
+    }
+  }, [watchDC, pendingDCs, editingId, setValue]);
+  const subTotal = rows.reduce((acc, r) => acc + r.amount, 0);
+  const selectedTax = taxCodes2.find((t) => t._id === watchTax);
+  const taxableAmount = subTotal + Number(watchTransport) + Number(watchLoading);
+  const taxAmt = taxableAmount * ((selectedTax?.totalRate || 0) / 100);
+  const grandTotal = taxableAmount + taxAmt;
+  const handleAdd = () => {
+    setEditingId(null);
+    reset({
+      date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
+      customer: "",
+      site: "",
+      referenceDC: "",
+      taxCode: "",
+      transportCharges: 0,
+      loadingCharges: 0
+    });
+    setRows([]);
+    setOpen(true);
+  };
+  const handleEdit = (inv) => {
+    setEditingId(inv._id);
+    reset({
+      date: inv.date.split("T")[0],
+      customer: inv.customer?._id,
+      site: inv.site?._id || inv.site,
+      referenceDC: inv.referenceDC,
+      taxCode: inv.taxCode,
+      transportCharges: inv.transportCharges,
+      loadingCharges: inv.loadingCharges
+    });
+    setRows(inv.items);
+    setOpen(true);
+  };
+  const handlePdfView = (inv) => {
+    const pdfData = {
+      ...inv,
+      docType: "Sales Invoice",
+      billingAddress: inv.billingAddress || inv.customer?.billingAddress
+    };
+    setSelectedForPdf(pdfData);
+    setPdfOpen(true);
+  };
+  const onSubmit = async (data) => {
+    const token = localStorage.getItem("token");
+    const url = editingId ? `/api/sales/invoices/${editingId}` : "/api/sales/invoices";
     const method = editingId ? "PUT" : "POST";
     const res = await fetch(url, {
       method,
@@ -9720,51 +10758,75 @@ const adjustments = UNSAFE_withComponentProps(function Adjustments() {
       },
       body: JSON.stringify({
         ...data,
-        adjustments: stagedRows
+        items: rows,
+        subTotal,
+        taxAmount: taxAmt,
+        grandTotal
       })
     });
     if (res.ok) {
-      toast.success(editingId ? "Updated!" : "Created!");
+      toast.success(editingId ? "Invoice Updated!" : "Invoice Created!");
       setOpen(false);
-      reset();
-      setStagedRows([]);
-      fetchAll();
-    } else {
-      toast.error("Failed");
+      fetchInitial();
     }
   };
+  const fmt = (val) => new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR"
+  }).format(val);
   return /* @__PURE__ */ jsxs("div", {
     className: "space-y-6",
     children: [/* @__PURE__ */ jsxs("div", {
-      className: "flex justify-between items-center",
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4 transition-all",
       children: [/* @__PURE__ */ jsx("h2", {
-        className: "text-2xl font-bold",
-        children: "Extra Item Adjustment"
-      }), /* @__PURE__ */ jsxs(Button, {
-        onClick: handleAdd,
-        className: "bg-orange-600 hover-card-glow",
-        children: [/* @__PURE__ */ jsx(Plus, {
-          className: "mr-2 h-4 w-4"
-        }), " New Adjustment"]
+        className: "text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight",
+        children: "Sale Invoices"
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search invoices...",
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none focus-visible:ring-primary",
+            value: searchTerm,
+            onChange: (e) => setSearchTerm(e.target.value)
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 text-primary border",
+          onClick: fetchInitial,
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
+        }), /* @__PURE__ */ jsxs(Button, {
+          onClick: handleAdd,
+          className: "bg-[#2196F3] hover:bg-[#1976D2] text-white h-10 px-6 font-bold shadow-md",
+          children: [/* @__PURE__ */ jsx(Plus, {
+            className: "mr-2 h-4 w-4"
+          }), " Add"]
+        })]
       })]
     }), /* @__PURE__ */ jsx(Dialog, {
       open,
       onOpenChange: setOpen,
       children: /* @__PURE__ */ jsxs(DialogContent, {
-        className: "sm:max-w-[900px] max-h-[95vh] overflow-y-auto",
+        className: "sm:max-w-[900px] max-h-[90vh] overflow-y-auto rounded-xl",
         children: [/* @__PURE__ */ jsx(DialogHeader, {
           children: /* @__PURE__ */ jsx(DialogTitle, {
-            children: editingId ? "Edit Adjustment" : "Adjust Excess"
+            children: editingId ? "Edit Sales Invoice" : "Create New Sales Invoice"
           })
         }), /* @__PURE__ */ jsxs("form", {
           onSubmit: handleSubmit(onSubmit),
           className: "space-y-6",
           children: [/* @__PURE__ */ jsxs("div", {
-            className: "grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border",
+            className: "grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border",
             children: [/* @__PURE__ */ jsxs("div", {
               className: "space-y-2",
               children: [/* @__PURE__ */ jsx(Label, {
-                children: "Date"
+                children: "Invoice Date"
               }), /* @__PURE__ */ jsx(Input, {
                 type: "date",
                 ...register2("date")
@@ -9781,7 +10843,6 @@ const adjustments = UNSAFE_withComponentProps(function Adjustments() {
                 }) => /* @__PURE__ */ jsxs(Select, {
                   onValueChange: field.onChange,
                   value: field.value,
-                  disabled: !!editingId,
                   children: [/* @__PURE__ */ jsx(SelectTrigger, {
                     children: /* @__PURE__ */ jsx(SelectValue, {
                       placeholder: "Select"
@@ -9792,300 +10853,1670 @@ const adjustments = UNSAFE_withComponentProps(function Adjustments() {
                       children: c.name
                     }, c._id))
                   })]
-                })
+                }, customers2.length)
               })]
             }), /* @__PURE__ */ jsxs("div", {
               className: "space-y-2",
               children: [/* @__PURE__ */ jsx(Label, {
-                children: "Site"
+                children: "Against DC"
               }), /* @__PURE__ */ jsx(Controller, {
-                name: "site",
+                name: "referenceDC",
                 control,
                 render: ({
                   field
                 }) => /* @__PURE__ */ jsxs(Select, {
                   onValueChange: field.onChange,
                   value: field.value,
-                  disabled: !watchCustomer || !!editingId,
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Select"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: filteredSites.map((s) => /* @__PURE__ */ jsx(SelectItem, {
-                      value: s._id,
-                      children: s.name
-                    }, s._id))
-                  })]
-                })
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "space-y-2",
-              children: [/* @__PURE__ */ jsx(Label, {
-                children: "Ref. Delivery Challan"
-              }), /* @__PURE__ */ jsx(Controller, {
-                name: "referenceChallan",
-                control,
-                render: ({
-                  field
-                }) => /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: field.onChange,
-                  value: field.value,
-                  disabled: !watchSite,
+                  disabled: !watchCustomer,
                   children: [/* @__PURE__ */ jsx(SelectTrigger, {
                     children: /* @__PURE__ */ jsx(SelectValue, {
                       placeholder: "Select DC"
                     })
                   }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: siteChallans.map((c) => /* @__PURE__ */ jsxs(SelectItem, {
-                      value: c._id,
-                      children: [c.docNo, " (", new Date(c.date).toLocaleDateString(), ")"]
-                    }, c._id))
+                    children: editingId ? /* @__PURE__ */ jsx(SelectItem, {
+                      value: watchDC,
+                      children: "Original DC Linked"
+                    }) : pendingDCs.map((d) => /* @__PURE__ */ jsx(SelectItem, {
+                      value: d._id,
+                      children: d.docNo
+                    }, d._id))
                   })]
-                })
-              })]
-            })]
-          }), watchChallan && !editingId && /* @__PURE__ */ jsxs("div", {
-            className: "bg-slate-50/80 p-4 rounded-lg border border-slate-200",
-            children: [/* @__PURE__ */ jsxs("div", {
-              className: "grid grid-cols-1 md:grid-cols-2 gap-4 mb-4",
-              children: [/* @__PURE__ */ jsxs("div", {
-                className: "space-y-2",
-                children: [/* @__PURE__ */ jsx(Label, {
-                  className: "text-green-600 font-bold",
-                  children: "Select Excess Item (Source)"
-                }), /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: (val) => {
-                    const item = excessPool.find((e) => e.id === val);
-                    setSelectedExcess(item);
-                  },
-                  value: selectedExcess?.id || "",
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    className: "border-green-200 bg-white",
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Available Excess"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: excessPool.length === 0 ? /* @__PURE__ */ jsx(SelectItem, {
-                      value: "none",
-                      disabled: true,
-                      children: "No Excess Items"
-                    }) : excessPool.map((e) => /* @__PURE__ */ jsxs(SelectItem, {
-                      value: e.id,
-                      children: [e.name, " (Bal: ", e.balance, ")"]
-                    }, e.id))
-                  })]
-                })]
-              }), /* @__PURE__ */ jsxs("div", {
-                className: "space-y-2",
-                children: [/* @__PURE__ */ jsx(Label, {
-                  className: "text-slate-700 font-bold",
-                  children: "Select Target Item (Target)"
-                }), /* @__PURE__ */ jsxs(Select, {
-                  onValueChange: (val) => {
-                    const item = challanItems.find((i) => i.id === val);
-                    setSelectedTarget(item);
-                  },
-                  value: selectedTarget?.id || "",
-                  children: [/* @__PURE__ */ jsx(SelectTrigger, {
-                    className: "border-slate-300 bg-white",
-                    children: /* @__PURE__ */ jsx(SelectValue, {
-                      placeholder: "Item in Challan"
-                    })
-                  }), /* @__PURE__ */ jsx(SelectContent, {
-                    children: challanItems.length === 0 ? /* @__PURE__ */ jsx(SelectItem, {
-                      value: "none",
-                      disabled: true,
-                      children: "No Items in DC"
-                    }) : challanItems.map((i) => /* @__PURE__ */ jsxs(SelectItem, {
-                      value: i.id,
-                      children: [i.name, " (Sent: ", i.currentQty, ")"]
-                    }, i.id))
-                  })]
-                })]
-              })]
-            }), /* @__PURE__ */ jsxs("div", {
-              className: "flex gap-2 items-end justify-end",
-              children: [/* @__PURE__ */ jsxs("div", {
-                className: "w-32 space-y-1",
-                children: [/* @__PURE__ */ jsx(Label, {
-                  children: "Qty"
-                }), /* @__PURE__ */ jsx(Input, {
-                  type: "number",
-                  value: adjustQty,
-                  onChange: (e) => setAdjustQty(Number(e.target.value)),
-                  className: "bg-white"
-                })]
-              }), /* @__PURE__ */ jsxs(Button, {
-                type: "button",
-                onClick: handleStage,
-                className: "bg-slate-900",
-                children: [/* @__PURE__ */ jsx(ArrowRightLeft, {
-                  className: "mr-2 h-4 w-4"
-                }), " Swap"]
+                }, pendingDCs.length)
               })]
             })]
           }), /* @__PURE__ */ jsx("div", {
-            className: "border rounded-md",
+            className: "border rounded-md overflow-hidden",
             children: /* @__PURE__ */ jsxs(Table, {
               children: [/* @__PURE__ */ jsx(TableHeader, {
                 children: /* @__PURE__ */ jsxs(TableRow, {
-                  className: "bg-slate-100",
+                  className: "bg-slate-100 dark:bg-slate-800",
                   children: [/* @__PURE__ */ jsx(TableHead, {
-                    className: "text-green-700",
-                    children: "Excess (Source)"
-                  }), /* @__PURE__ */ jsx(TableHead, {
-                    className: "text-slate-700",
-                    children: "Target Item"
+                    children: "Item Name"
                   }), /* @__PURE__ */ jsx(TableHead, {
                     className: "text-right",
                     children: "Qty"
-                  }), !editingId && /* @__PURE__ */ jsx(TableHead, {
-                    className: "w-[50px]"
+                  }), /* @__PURE__ */ jsx(TableHead, {
+                    className: "text-right",
+                    children: "Rate"
+                  }), /* @__PURE__ */ jsx(TableHead, {
+                    className: "text-right",
+                    children: "Amount"
                   })]
                 })
               }), /* @__PURE__ */ jsx(TableBody, {
-                children: stagedRows.length === 0 ? /* @__PURE__ */ jsx(TableRow, {
+                children: rows.length === 0 ? /* @__PURE__ */ jsx(TableRow, {
                   children: /* @__PURE__ */ jsx(TableCell, {
                     colSpan: 4,
                     className: "text-center h-20 text-slate-400",
-                    children: "No adjustments."
+                    children: "Items will load after DC selection"
                   })
-                }) : stagedRows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
+                }) : rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
                   children: [/* @__PURE__ */ jsx(TableCell, {
-                    className: "font-medium text-green-700",
-                    children: row.excessItemName
-                  }), /* @__PURE__ */ jsx(TableCell, {
-                    className: "font-medium text-slate-700",
-                    children: row.challanItemName
+                    className: "font-medium",
+                    children: row.itemName
                   }), /* @__PURE__ */ jsx(TableCell, {
                     className: "text-right font-bold",
-                    children: row.adjustedQty
-                  }), !editingId && /* @__PURE__ */ jsx(TableCell, {
-                    children: /* @__PURE__ */ jsx(Button, {
-                      type: "button",
-                      variant: "ghost",
-                      size: "icon",
-                      onClick: () => removeRow(i),
-                      children: /* @__PURE__ */ jsx(Trash2, {
-                        className: "h-4 w-4 text-red-500"
-                      })
-                    })
+                    children: row.quantity
+                  }), /* @__PURE__ */ jsxs(TableCell, {
+                    className: "text-right",
+                    children: ["₹", row.rate]
+                  }), /* @__PURE__ */ jsxs(TableCell, {
+                    className: "text-right font-black text-primary",
+                    children: ["₹", row.amount.toFixed(2)]
                   })]
                 }, i))
               })]
             })
-          }), /* @__PURE__ */ jsx(DialogFooter, {
-            className: "flex justify-end gap-2",
-            children: /* @__PURE__ */ jsx(Button, {
-              type: "submit",
-              className: "hover-card-glow bg-orange-600 px-6",
-              children: editingId ? "Update Adjustment" : "Save Adjustment"
-            })
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "grid grid-cols-1 md:grid-cols-2 gap-6",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "space-y-4",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Transport / Logistics"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "number",
+                  ...register2("transportCharges")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Loading / Unloading"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "number",
+                  ...register2("loadingCharges")
+                })]
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "p-5 bg-primary/5 rounded-lg border border-primary/20 space-y-2 shadow-inner",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "flex justify-between text-sm",
+                children: [/* @__PURE__ */ jsx("span", {
+                  children: "Basic Amount:"
+                }), /* @__PURE__ */ jsxs("span", {
+                  className: "font-bold",
+                  children: ["₹", subTotal.toFixed(2)]
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "flex justify-between items-center",
+                children: [/* @__PURE__ */ jsx("span", {
+                  children: "Tax Scheme:"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "taxCode",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      className: "h-8 w-32",
+                      children: /* @__PURE__ */ jsx(SelectValue, {})
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: taxCodes2.map((t) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: t._id,
+                        children: t.name
+                      }, t._id))
+                    })]
+                  }, taxCodes2.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "flex justify-between text-xl font-black text-primary border-t pt-3 mt-2 tracking-tight",
+                children: [/* @__PURE__ */ jsx("span", {
+                  children: "Grand Total:"
+                }), /* @__PURE__ */ jsxs("span", {
+                  children: ["₹", grandTotal.toFixed(2)]
+                })]
+              })]
+            })]
+          }), /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            disabled: isSubmitting,
+            className: "w-full bg-primary h-12 text-lg font-bold shadow-lg uppercase tracking-widest",
+            children: editingId ? "Update Record" : "Generate Invoice"
           })]
         })]
       })
     }), /* @__PURE__ */ jsx("div", {
-      className: "grid gap-5 md:grid-cols-4 lg:grid-cols-4",
-      children: adjustments2.map((adj) => /* @__PURE__ */ jsx(Card, {
-        className: "hover:shadow-md transition-all hover-card-glow relative border-t-4 border-t-transparent hover:border-t-orange-500",
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 pb-10",
+      children: invoices.filter((i) => i.docNo.toLowerCase().includes(searchTerm.toLowerCase()) || i.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase())).map((inv) => /* @__PURE__ */ jsx(Card, {
+        className: "overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 group bg-white dark:bg-slate-900 hover-card-glow",
         children: /* @__PURE__ */ jsxs(CardContent, {
-          className: "p-5",
-          children: [/* @__PURE__ */ jsx(Button, {
-            variant: "ghost",
-            size: "icon",
-            className: "absolute top-2 right-2 text-slate-400 hover:text-orange-600",
-            onClick: () => handleEdit(adj),
-            children: /* @__PURE__ */ jsx(Pencil, {
-              className: "h-4 w-4"
-            })
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "flex justify-between items-start mb-3",
+          className: "p-0",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "p-4 flex justify-between items-center border-b bg-slate-50/50 dark:bg-slate-800/50",
             children: [/* @__PURE__ */ jsx("span", {
-              className: "font-bold text-lg text-slate-800",
-              children: adj.docNo
-            }), /* @__PURE__ */ jsx(Badge, {
-              variant: "outline",
-              className: "text-xs",
-              children: new Date(adj.date).toLocaleDateString()
+              className: "font-black text-slate-800 dark:text-white text-sm tracking-tight uppercase",
+              children: inv.docNo
+            }), /* @__PURE__ */ jsx("span", {
+              className: "text-[11px] font-bold text-slate-500",
+              children: format(new Date(inv.date), "dd-MMM-yyyy")
             })]
           }), /* @__PURE__ */ jsxs("div", {
-            className: "text-sm space-y-1 text-slate-600",
+            className: "p-5 space-y-3",
             children: [/* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx(User, {
-                className: "h-3 w-3"
-              }), " ", adj.customer?.name]
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase mt-0.5",
+                children: "Customer:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-800 dark:text-slate-200 text-sm text-right truncate flex-1",
+                children: inv.customer?.name || "N/A"
+              })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2",
-              children: [/* @__PURE__ */ jsx(MapPin, {
-                className: "h-3 w-3"
-              }), " ", adj.site?.name]
+              className: "flex justify-between items-center",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Basic Amount:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-700 dark:text-slate-300 text-sm",
+                children: fmt(inv.subTotal || 0)
+              })]
             }), /* @__PURE__ */ jsxs("div", {
-              className: "flex items-center gap-2 text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-fit mt-1",
-              children: [/* @__PURE__ */ jsx(Truck, {
-                className: "h-3 w-3"
-              }), " Ref: ", adj.referenceChallan?.docNo || "Unknown"]
+              className: "flex justify-between items-center",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Tax Amount:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-700 dark:text-slate-300 text-sm",
+                children: fmt(inv.taxAmount || 0)
+              })]
+            }), /* @__PURE__ */ jsx(Separator, {
+              className: "opacity-50"
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-xs text-slate-900 dark:text-white font-black uppercase",
+                children: "Total Amount:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-primary text-base",
+                children: fmt(inv.grandTotal || 0)
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Invoice Status:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-green-600 text-[10px] uppercase bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded",
+                children: "Open"
+              })]
             })]
           }), /* @__PURE__ */ jsxs("div", {
-            className: "mt-4 pt-3 border-t text-xs font-medium text-slate-500 flex items-center gap-2",
-            children: [/* @__PURE__ */ jsx(Scale, {
-              className: "h-4 w-4 text-orange-600"
-            }), /* @__PURE__ */ jsxs("span", {
-              children: [adj.adjustments?.length || 0, " Items Swapped"]
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-colors",
+              onClick: () => handlePdfView(inv),
+              children: /* @__PURE__ */ jsx(Eye, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors",
+              onClick: () => handleEdit(inv),
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-full transition-colors",
+              onClick: () => handlePdfView(inv),
+              children: /* @__PURE__ */ jsx(CloudDownload, {
+                size: 18
+              })
             })]
           })]
         })
-      }, adj._id))
-    })]
-  });
-});
-const route26 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  default: adjustments,
-  meta: meta$2
-}, Symbol.toStringTag, { value: "Module" }));
-const authLayout = UNSAFE_withComponentProps(function AuthLayout() {
-  return /* @__PURE__ */ jsxs("div", {
-    className: "min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden",
-    children: [/* @__PURE__ */ jsxs("div", {
-      className: "absolute top-0 left-0 w-full h-full overflow-hidden z-0",
-      children: [/* @__PURE__ */ jsx("div", {
-        className: "absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-orange-100 blur-3xl opacity-60"
-      }), /* @__PURE__ */ jsx("div", {
-        className: "absolute top-[60%] -right-[10%] w-[40%] h-[40%] rounded-full bg-slate-200 blur-3xl opacity-60"
-      })]
-    }), /* @__PURE__ */ jsxs("div", {
-      className: "relative z-10 w-full max-w-md p-4",
-      children: [/* @__PURE__ */ jsxs("div", {
-        className: "text-center mb-8",
-        children: [/* @__PURE__ */ jsxs("div", {
-          className: "inline-flex items-center gap-2 mb-4",
-          children: [/* @__PURE__ */ jsx("div", {
-            className: "h-10 w-10 bg-orange-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg",
-            children: "S"
-          }), /* @__PURE__ */ jsxs("span", {
-            className: "font-bold text-3xl tracking-tight text-slate-900",
-            children: ["SCAFF", /* @__PURE__ */ jsx("span", {
-              className: "text-orange-600",
-              children: "RENT"
-            })]
-          })]
-        }), /* @__PURE__ */ jsx("p", {
-          className: "text-slate-500",
-          children: "Rental Management System"
-        })]
-      }), /* @__PURE__ */ jsx(Outlet, {})]
+      }, inv._id))
+    }), /* @__PURE__ */ jsx(PDFViewerDialog, {
+      open: pdfOpen,
+      onOpenChange: setPdfOpen,
+      data: selectedForPdf,
+      type: "SALE"
     })]
   });
 });
 const route27 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  default: salesInvoice,
+  meta: meta$5
+}, Symbol.toStringTag, { value: "Module" }));
+function meta$4({}) {
+  return [{
+    title: "Sale Return - ScaffRent"
+  }];
+}
+const returnSchema = z.object({
+  date: z.string(),
+  customer: z.string().min(1, "Select Customer"),
+  referenceInvoice: z.string().min(1, "Select Invoice"),
+  taxCode: z.string().min(1, "Select Tax"),
+  transportCharges: z.coerce.number().min(0),
+  loadingCharges: z.coerce.number().min(0),
+  remark: z.string().optional()
+});
+const saleReturn = UNSAFE_withComponentProps(function SaleReturnPage() {
+  const [customers2, setCustomers] = useState([]);
+  const [taxCodes2, setTaxCodes] = useState([]);
+  const [customerInvoices, setCustomerInvoices] = useState([]);
+  const [returns, setReturns] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const {
+    register: register2,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    reset
+  } = useForm({
+    resolver: zodResolver(returnSchema),
+    defaultValues: {
+      date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
+      customer: "",
+      referenceInvoice: "",
+      taxCode: "",
+      transportCharges: 0,
+      loadingCharges: 0,
+      remark: ""
+    }
+  });
+  const watchCustomer = watch("customer");
+  const watchInvoice = watch("referenceInvoice");
+  const watchTax = watch("taxCode");
+  const fetchInitial = async () => {
+    const token = localStorage.getItem("token");
+    const h = {
+      "Authorization": `Bearer ${token}`
+    };
+    try {
+      const [c, t, sr] = await Promise.all([fetch("/api/masters/customers", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/tax-codes", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/sales/returns", {
+        headers: h
+      }).then((r) => r.json())]);
+      setCustomers(Array.isArray(c) ? c : []);
+      setTaxCodes(Array.isArray(t) ? t : []);
+      setReturns(sr);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  useEffect(() => {
+    fetchInitial();
+  }, []);
+  useEffect(() => {
+    if (watchCustomer && !editingId) {
+      const token = localStorage.getItem("token");
+      fetch(`/api/sales/customer-invoices?customerId=${watchCustomer}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      }).then((r) => r.json()).then((data) => setCustomerInvoices(Array.isArray(data) ? data : []));
+    }
+  }, [watchCustomer, editingId]);
+  useEffect(() => {
+    if (watchInvoice && !editingId) {
+      const inv = customerInvoices.find((i) => i._id === watchInvoice);
+      if (inv) {
+        const grid = inv.items.map((i) => ({
+          item: i.item,
+          itemName: i.itemName,
+          unit: i.unit,
+          quantity: i.quantity,
+          rate: i.rate,
+          amount: i.amount
+        }));
+        setRows(grid);
+        setValue("taxCode", inv.taxCode);
+      }
+    }
+  }, [watchInvoice, customerInvoices, editingId, setValue]);
+  const subTotal = rows.reduce((acc, r) => acc + (r.amount || 0), 0);
+  const selectedTax = taxCodes2.find((t) => t._id === watchTax);
+  const taxAmt = subTotal * ((selectedTax?.totalRate || 0) / 100);
+  const total = subTotal + taxAmt;
+  const handleAdd = () => {
+    setEditingId(null);
+    setViewMode(false);
+    reset({
+      date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
+      customer: "",
+      referenceInvoice: "",
+      taxCode: "",
+      transportCharges: 0,
+      loadingCharges: 0,
+      remark: ""
+    });
+    setRows([]);
+    setOpen(true);
+  };
+  const handleEdit = (ret) => {
+    setEditingId(ret._id);
+    setViewMode(false);
+    reset({
+      date: ret.date.split("T")[0],
+      customer: ret.customer?._id,
+      referenceInvoice: ret.referenceInvoice,
+      taxCode: ret.taxCode,
+      transportCharges: ret.transportCharges,
+      loadingCharges: ret.loadingCharges,
+      remark: ret.remark
+    });
+    setRows(ret.items);
+    setOpen(true);
+  };
+  const handleView = (ret) => {
+    handleEdit(ret);
+    setViewMode(true);
+  };
+  const handleDownload = (ret) => {
+    toast.info(`Downloading Return Note ${ret.docNo}...`);
+    window.print();
+  };
+  const onSubmit = async (data) => {
+    const token = localStorage.getItem("token");
+    const url = editingId ? `/api/sales/returns/${editingId}` : "/api/sales/returns";
+    const method = editingId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        ...data,
+        items: rows,
+        subTotal,
+        taxAmount: taxAmt,
+        grandTotal: total
+      })
+    });
+    if (res.ok) {
+      toast.success(editingId ? "Return Updated!" : "Return Processed!");
+      setOpen(false);
+      fetchInitial();
+    }
+  };
+  const fmt = (val) => new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR"
+  }).format(val);
+  return /* @__PURE__ */ jsxs("div", {
+    className: "space-y-6",
+    children: [/* @__PURE__ */ jsxs("div", {
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
+      children: [/* @__PURE__ */ jsx("h2", {
+        className: "text-xl font-bold text-slate-800 dark:text-white",
+        children: "Sale Returns"
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3",
+        children: [/* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 text-primary border",
+          onClick: fetchInitial,
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
+        }), /* @__PURE__ */ jsxs(Button, {
+          onClick: handleAdd,
+          className: "hover-card-glow bg-red-600 hover:bg-red-700 text-white h-10 px-6 font-bold shadow-md",
+          children: [/* @__PURE__ */ jsx(Plus, {
+            className: "mr-2 h-4 w-4"
+          }), " Add Return"]
+        })]
+      })]
+    }), /* @__PURE__ */ jsx(Dialog, {
+      open,
+      onOpenChange: setOpen,
+      children: /* @__PURE__ */ jsxs(DialogContent, {
+        className: "sm:max-w-[900px] max-h-[90vh] overflow-y-auto",
+        children: [/* @__PURE__ */ jsx(DialogHeader, {
+          children: /* @__PURE__ */ jsx(DialogTitle, {
+            children: viewMode ? "Return Details" : editingId ? "Edit Return" : "Create Sale Return"
+          })
+        }), /* @__PURE__ */ jsxs("form", {
+          onSubmit: handleSubmit(onSubmit),
+          className: "space-y-6",
+          children: [/* @__PURE__ */ jsxs("fieldset", {
+            disabled: viewMode,
+            className: "space-y-6",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-red-50/30 dark:bg-red-950/10 rounded-lg border border-red-100",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-2",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Return Date"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "date",
+                  ...register2("date")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-2",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Customer"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "customer",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: customers2.map((c) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: c._id,
+                        children: c.name
+                      }, c._id))
+                    })]
+                  }, customers2.length)
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-2",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Against Sale Invoice"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "referenceInvoice",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    disabled: !watchCustomer || viewMode,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select Invoice"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: editingId ? /* @__PURE__ */ jsx(SelectItem, {
+                        value: watchInvoice,
+                        children: "Original Invoice Attached"
+                      }) : customerInvoices.map((inv) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: inv._id,
+                        children: inv.docNo
+                      }, inv._id))
+                    })]
+                  }, customerInvoices.length)
+                })]
+              })]
+            }), /* @__PURE__ */ jsx("div", {
+              className: "border rounded-md overflow-hidden",
+              children: /* @__PURE__ */ jsxs(Table, {
+                children: [/* @__PURE__ */ jsx(TableHeader, {
+                  children: /* @__PURE__ */ jsxs(TableRow, {
+                    className: "bg-slate-100 dark:bg-slate-800",
+                    children: [/* @__PURE__ */ jsx(TableHead, {
+                      children: "Item Name"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Qty Returned"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Rate"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Total Credit"
+                    })]
+                  })
+                }), /* @__PURE__ */ jsx(TableBody, {
+                  children: rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
+                    children: [/* @__PURE__ */ jsx(TableCell, {
+                      className: "font-medium",
+                      children: row.itemName
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      className: "text-right",
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "w-20 ml-auto h-8 text-right",
+                        value: row.quantity,
+                        onChange: (e) => {
+                          const newRows = [...rows];
+                          newRows[i].quantity = Number(e.target.value);
+                          newRows[i].amount = newRows[i].quantity * newRows[i].rate;
+                          setRows(newRows);
+                        }
+                      })
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right",
+                      children: ["₹", row.rate]
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right font-bold text-red-600",
+                      children: ["₹", row.amount.toFixed(2)]
+                    })]
+                  }, i))
+                })]
+              })
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-1 md:grid-cols-2 gap-6",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-2",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Remark / Reason"
+                }), /* @__PURE__ */ jsx(Textarea, {
+                  ...register2("remark"),
+                  placeholder: "Reason for return...",
+                  className: "h-full min-h-[100px]"
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "p-4 bg-red-50/50 dark:bg-red-950/10 rounded-lg border border-red-100 space-y-2",
+                children: [/* @__PURE__ */ jsxs("div", {
+                  className: "flex justify-between text-sm",
+                  children: [/* @__PURE__ */ jsx("span", {
+                    children: "Credit Subtotal:"
+                  }), /* @__PURE__ */ jsxs("span", {
+                    className: "font-bold",
+                    children: ["₹", subTotal.toFixed(2)]
+                  })]
+                }), /* @__PURE__ */ jsxs("div", {
+                  className: "flex justify-between items-center",
+                  children: [/* @__PURE__ */ jsx("span", {
+                    children: "Tax Scheme:"
+                  }), /* @__PURE__ */ jsx(Controller, {
+                    name: "taxCode",
+                    control,
+                    render: ({
+                      field
+                    }) => /* @__PURE__ */ jsxs(Select, {
+                      onValueChange: field.onChange,
+                      value: field.value,
+                      disabled: viewMode,
+                      children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                        className: "h-7 w-24 text-xs",
+                        children: /* @__PURE__ */ jsx(SelectValue, {})
+                      }), /* @__PURE__ */ jsx(SelectContent, {
+                        children: taxCodes2.map((t) => /* @__PURE__ */ jsx(SelectItem, {
+                          value: t._id,
+                          children: t.name
+                        }, t._id))
+                      })]
+                    })
+                  })]
+                }), /* @__PURE__ */ jsxs("div", {
+                  className: "flex justify-between text-lg font-black text-red-700 border-t pt-2",
+                  children: [/* @__PURE__ */ jsx("span", {
+                    children: "Total Credit:"
+                  }), /* @__PURE__ */ jsxs("span", {
+                    children: ["₹", total.toFixed(2)]
+                  })]
+                })]
+              })]
+            })]
+          }), !viewMode && /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            className: "hover-card-glow w-full bg-red-600 hover:bg-red-700 text-white h-12 text-lg shadow-lg font-bold uppercase tracking-widest",
+            children: editingId ? "Update Return" : "Process Return"
+          })]
+        })]
+      })
+    }), /* @__PURE__ */ jsx("div", {
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+      children: returns.map((ret) => /* @__PURE__ */ jsx(Card, {
+        className: "hover-card-glow overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 group bg-white dark:bg-slate-900",
+        children: /* @__PURE__ */ jsxs(CardContent, {
+          className: "p-0",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "p-4 flex justify-between items-center border-b bg-red-50/50 dark:bg-red-900/10",
+            children: [/* @__PURE__ */ jsx("span", {
+              className: "font-black text-red-700 text-sm tracking-tight",
+              children: ret.docNo
+            }), /* @__PURE__ */ jsx("span", {
+              className: "text-[11px] font-bold text-slate-500",
+              children: format(new Date(ret.date), "dd-MMM-yyyy")
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "p-5 space-y-3",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase mt-0.5",
+                children: "Customer:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-800 dark:text-slate-200 text-sm text-right truncate flex-1",
+                children: ret.customer?.name || "N/A"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Credit Basic:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-700 dark:text-slate-300 text-sm",
+                children: fmt(ret.subTotal || 0)
+              })]
+            }), /* @__PURE__ */ jsx(Separator, {
+              className: "opacity-50"
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-xs text-red-900 dark:text-red-400 font-black uppercase",
+                children: "Grand Total:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-red-600 text-base",
+                children: fmt(ret.grandTotal || 0)
+              })]
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              onClick: () => handleView(ret),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Eye, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleEdit(ret),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleDownload(ret),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(CloudDownload, {
+                size: 18
+              })
+            })]
+          })]
+        })
+      }, ret._id))
+    })]
+  });
+});
+const route28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: saleReturn,
+  meta: meta$4
+}, Symbol.toStringTag, { value: "Module" }));
+function meta$3({}) {
+  return [{
+    title: "Suppliers - ScaffRent"
+  }];
+}
+const supSchema = z.object({
+  name: z.string().min(2, "Name required"),
+  contactPerson: z.string().min(2, "Contact Person required"),
+  mob1: z.string().min(10, "Mobile 1 required"),
+  mob2: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  billingAddress: z.string().optional(),
+  billingState: z.string().optional(),
+  gstn: z.string().toUpperCase().optional().or(z.literal("")).refine((val) => !val || validateGSTN(val), {
+    message: "Invalid GSTN"
+  }),
+  pan: z.string().toUpperCase().optional().or(z.literal("")).refine((val) => !val || validatePAN(val), {
+    message: "Invalid PAN"
+  }),
+  currency: z.string().min(1, "Currency is required")
+});
+const suppliers = UNSAFE_withComponentProps(function Suppliers() {
+  const [suppliers2, setSuppliers] = useState([]);
+  const [currencies2, setCurrencies] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const {
+    register: register2,
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: {
+      errors
+    }
+  } = useForm({
+    resolver: zodResolver(supSchema),
+    defaultValues: {
+      name: "",
+      contactPerson: "",
+      mob1: "",
+      email: "",
+      billingAddress: "",
+      gstn: "",
+      pan: "",
+      currency: ""
+    }
+  });
+  const fetchAll = async () => {
+    const token = localStorage.getItem("token");
+    const h = {
+      "Authorization": `Bearer ${token}`
+    };
+    try {
+      const [sRes, cRes] = await Promise.all([fetch("/api/masters/suppliers", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/currencies", {
+        headers: h
+      }).then((r) => r.json())]);
+      setSuppliers(Array.isArray(sRes) ? sRes : []);
+      setCurrencies(Array.isArray(cRes) ? cRes : []);
+    } catch (e) {
+      toast.error("Error loading data");
+    }
+  };
+  useEffect(() => {
+    fetchAll();
+  }, []);
+  const handleEdit = (sup) => {
+    setEditingId(sup._id);
+    reset({
+      name: sup.name,
+      contactPerson: sup.contactPerson,
+      mob1: sup.mob1,
+      mob2: sup.mob2,
+      email: sup.email,
+      billingAddress: sup.billingAddress,
+      billingState: sup.billingState,
+      gstn: sup.gstn,
+      pan: sup.pan,
+      currency: sup.currency?._id || ""
+      // Map ID properly
+    });
+    setOpen(true);
+  };
+  const handleAdd = () => {
+    setEditingId(null);
+    reset({
+      name: "",
+      contactPerson: "",
+      mob1: "",
+      email: "",
+      billingAddress: "",
+      gstn: "",
+      pan: "",
+      currency: ""
+    });
+    setOpen(true);
+  };
+  const onSubmit = async (data) => {
+    const token = localStorage.getItem("token");
+    const url = editingId ? `/api/masters/suppliers/${editingId}` : "/api/masters/suppliers";
+    const method = editingId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      toast.success(editingId ? "Supplier Updated" : "Supplier Created");
+      setOpen(false);
+      fetchAll();
+    } else {
+      toast.error("Failed to save");
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", {
+    className: "space-y-6",
+    children: [/* @__PURE__ */ jsxs("div", {
+      className: "flex justify-between items-center",
+      children: [/* @__PURE__ */ jsx("h2", {
+        className: "text-2xl font-bold tracking-tight",
+        children: "Suppliers"
+      }), /* @__PURE__ */ jsxs(Button, {
+        onClick: handleAdd,
+        className: "bg-primary hover-card-glow",
+        children: [/* @__PURE__ */ jsx(Plus, {
+          className: "mr-2 h-4 w-4"
+        }), " Add Supplier"]
+      })]
+    }), /* @__PURE__ */ jsx(Dialog, {
+      open,
+      onOpenChange: setOpen,
+      children: /* @__PURE__ */ jsxs(DialogContent, {
+        className: "sm:max-w-[650px] max-h-[90vh] overflow-y-auto",
+        children: [/* @__PURE__ */ jsx(DialogHeader, {
+          children: /* @__PURE__ */ jsx(DialogTitle, {
+            children: editingId ? "Edit Supplier" : "New Supplier Registration"
+          })
+        }), /* @__PURE__ */ jsxs("form", {
+          onSubmit: handleSubmit(onSubmit),
+          className: "space-y-4 py-2",
+          children: [/* @__PURE__ */ jsxs(Tabs, {
+            defaultValue: "general",
+            children: [/* @__PURE__ */ jsxs(TabsList, {
+              className: "grid w-full grid-cols-2",
+              children: [/* @__PURE__ */ jsx(TabsTrigger, {
+                value: "general",
+                children: "General Details"
+              }), /* @__PURE__ */ jsx(TabsTrigger, {
+                value: "address",
+                children: "Tax & Address"
+              })]
+            }), /* @__PURE__ */ jsxs(TabsContent, {
+              value: "general",
+              className: "space-y-4 pt-4",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-2",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Supplier Company Name"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("name"),
+                  placeholder: "Legal Name"
+                }), errors.name && /* @__PURE__ */ jsx("span", {
+                  className: "text-red-500 text-xs",
+                  children: errors.name.message
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "grid grid-cols-2 gap-4",
+                children: [/* @__PURE__ */ jsxs("div", {
+                  className: "space-y-2",
+                  children: [/* @__PURE__ */ jsx(Label, {
+                    children: "Contact Person"
+                  }), /* @__PURE__ */ jsx(Input, {
+                    ...register2("contactPerson")
+                  })]
+                }), /* @__PURE__ */ jsxs("div", {
+                  className: "space-y-2",
+                  children: [/* @__PURE__ */ jsx(Label, {
+                    children: "Email"
+                  }), /* @__PURE__ */ jsx(Input, {
+                    ...register2("email")
+                  })]
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "grid grid-cols-2 gap-4",
+                children: [/* @__PURE__ */ jsxs("div", {
+                  className: "space-y-2",
+                  children: [/* @__PURE__ */ jsx(Label, {
+                    children: "Mobile 1"
+                  }), /* @__PURE__ */ jsx(Input, {
+                    ...register2("mob1")
+                  }), errors.mob1 && /* @__PURE__ */ jsx("span", {
+                    className: "text-red-500 text-xs",
+                    children: errors.mob1.message
+                  })]
+                }), /* @__PURE__ */ jsxs("div", {
+                  className: "space-y-2",
+                  children: [/* @__PURE__ */ jsx(Label, {
+                    children: "Currency"
+                  }), /* @__PURE__ */ jsx(Controller, {
+                    name: "currency",
+                    control,
+                    render: ({
+                      field
+                    }) => /* @__PURE__ */ jsxs(Select, {
+                      onValueChange: field.onChange,
+                      value: field.value || "",
+                      children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                        className: "w-full",
+                        children: /* @__PURE__ */ jsx(SelectValue, {
+                          placeholder: "Select Currency"
+                        })
+                      }), /* @__PURE__ */ jsx(SelectContent, {
+                        children: currencies2.map((c) => /* @__PURE__ */ jsxs(SelectItem, {
+                          value: c._id,
+                          children: [c.code, " (", c.symbol, ")"]
+                        }, c._id))
+                      })]
+                    }, `curr-select-${currencies2.length}-${field.value}`)
+                  }), errors.currency && /* @__PURE__ */ jsx("span", {
+                    className: "text-red-500 text-xs",
+                    children: errors.currency.message
+                  })]
+                })]
+              })]
+            }), /* @__PURE__ */ jsxs(TabsContent, {
+              value: "address",
+              className: "space-y-4 pt-4",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "grid grid-cols-2 gap-4",
+                children: [/* @__PURE__ */ jsxs("div", {
+                  className: "space-y-2",
+                  children: [/* @__PURE__ */ jsx(Label, {
+                    children: "GSTN"
+                  }), /* @__PURE__ */ jsx(Input, {
+                    ...register2("gstn"),
+                    className: "uppercase",
+                    maxLength: 15,
+                    onChange: (e) => setValue("gstn", e.target.value.toUpperCase())
+                  }), errors.gstn && /* @__PURE__ */ jsx("span", {
+                    className: "text-red-500 text-xs",
+                    children: errors.gstn.message
+                  })]
+                }), /* @__PURE__ */ jsxs("div", {
+                  className: "space-y-2",
+                  children: [/* @__PURE__ */ jsx(Label, {
+                    children: "PAN"
+                  }), /* @__PURE__ */ jsx(Input, {
+                    ...register2("pan"),
+                    className: "uppercase",
+                    maxLength: 10,
+                    onChange: (e) => setValue("pan", e.target.value.toUpperCase())
+                  }), errors.pan && /* @__PURE__ */ jsx("span", {
+                    className: "text-red-500 text-xs",
+                    children: errors.pan.message
+                  })]
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-2",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Billing Address"
+                }), /* @__PURE__ */ jsx(Textarea, {
+                  ...register2("billingAddress"),
+                  placeholder: "Full Address..."
+                })]
+              })]
+            })]
+          }), /* @__PURE__ */ jsx(DialogFooter, {
+            className: "pt-4 border-t mt-4",
+            children: /* @__PURE__ */ jsx(Button, {
+              type: "submit",
+              className: "hover-card-glow w-full bg-primary font-bold uppercase tracking-widest h-11",
+              children: editingId ? "Update Supplier" : "Save Supplier"
+            })
+          })]
+        })]
+      })
+    }), /* @__PURE__ */ jsx("div", {
+      className: "grid gap-4 md:grid-cols-2 lg:grid-cols-4",
+      children: suppliers2.length === 0 ? /* @__PURE__ */ jsx("div", {
+        className: "col-span-full text-center py-20 text-slate-400 border-2 border-dashed rounded-xl",
+        children: "No suppliers found."
+      }) : suppliers2.map((sup) => /* @__PURE__ */ jsx(Card, {
+        className: "hover-card-glow relative border-l-4 border-l-primary group",
+        children: /* @__PURE__ */ jsxs(CardContent, {
+          className: "p-5",
+          children: [/* @__PURE__ */ jsx(Button, {
+            variant: "ghost",
+            size: "icon",
+            className: "absolute top-2 right-2 text-slate-400 hover:text-primary opacity-0 group-hover:opacity-100 transition-all",
+            onClick: () => handleEdit(sup),
+            children: /* @__PURE__ */ jsx(Pencil, {
+              className: "h-4 w-4"
+            })
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "mb-2",
+            children: [/* @__PURE__ */ jsx("span", {
+              className: "text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full",
+              children: sup.code
+            }), /* @__PURE__ */ jsx("h4", {
+              className: "font-bold text-lg mt-2 truncate text-slate-900",
+              children: sup.name
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "mt-4 space-y-2 text-sm text-slate-600",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "flex items-center gap-2",
+              children: [/* @__PURE__ */ jsx(User, {
+                className: "h-3 w-3"
+              }), " ", sup.contactPerson]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex items-center gap-2",
+              children: [/* @__PURE__ */ jsx(Phone, {
+                className: "h-3 w-3"
+              }), " ", sup.mob1]
+            }), sup.currency && /* @__PURE__ */ jsxs("div", {
+              className: "flex items-center gap-2 text-xs font-bold text-primary mt-2",
+              children: [/* @__PURE__ */ jsx(Landmark, {
+                className: "h-3 w-3"
+              }), " ", sup.currency.code, " (", sup.currency.symbol, ")"]
+            })]
+          })]
+        })
+      }, sup._id))
+    })]
+  });
+});
+const route29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: suppliers,
+  meta: meta$3
+}, Symbol.toStringTag, { value: "Module" }));
+function meta$2({}) {
+  return [{
+    title: "Purchase Orders - ScaffRent"
+  }];
+}
+const poSchema = z.object({
+  date: z.string().min(1, "Date required"),
+  supplier: z.string().min(1, "Select Supplier"),
+  warehouse: z.string().min(1, "Select Warehouse"),
+  currencyRate: z.coerce.number().min(1),
+  taxCode: z.string().optional().or(z.literal("")),
+  transportCharges: z.coerce.number().min(0),
+  loadingCharges: z.coerce.number().min(0)
+});
+const purchaseOrder = UNSAFE_withComponentProps(function PurchaseOrderPage() {
+  const [suppliers2, setSuppliers] = useState([]);
+  const [warehouses2, setWarehouses] = useState([]);
+  const [items2, setItems] = useState([]);
+  const [taxCodes2, setTaxCodes] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [viewMode, setViewMode] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const {
+    register: register2,
+    control,
+    handleSubmit,
+    watch,
+    reset,
+    setValue,
+    formState: {
+      isSubmitting
+    }
+  } = useForm({
+    resolver: zodResolver(poSchema),
+    defaultValues: {
+      date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
+      supplier: "",
+      warehouse: "",
+      currencyRate: 1,
+      transportCharges: 0,
+      loadingCharges: 0,
+      taxCode: ""
+    }
+  });
+  const watchCharges = watch(["transportCharges", "loadingCharges", "taxCode"]);
+  const fetchMasters = async () => {
+    const token = localStorage.getItem("token");
+    const h = {
+      "Authorization": `Bearer ${token}`
+    };
+    try {
+      const [sup, wh, itm, tx] = await Promise.all([fetch("/api/masters/suppliers", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/warehouses", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/items", {
+        headers: h
+      }).then((r) => r.json()), fetch("/api/masters/tax-codes", {
+        headers: h
+      }).then((r) => r.json())]);
+      setSuppliers(Array.isArray(sup) ? sup : []);
+      setWarehouses(Array.isArray(wh) ? wh : []);
+      setItems(Array.isArray(itm) ? itm : []);
+      setTaxCodes(Array.isArray(tx) ? tx : []);
+    } catch (e) {
+      toast.error("Connection error");
+    }
+  };
+  const fetchHistory = useCallback(async (p) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`/api/purchase?page=${p}&limit=8`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setHistory(d.orders || []);
+        setTotalPages(d.pagination?.totalPages || 1);
+        setPage(d.pagination?.currentPage || 1);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+  useEffect(() => {
+    fetchMasters();
+    fetchHistory(1);
+  }, [fetchHistory]);
+  const handleAdd = () => {
+    setEditingId(null);
+    setViewMode(false);
+    reset({
+      date: format(/* @__PURE__ */ new Date(), "yyyy-MM-dd"),
+      supplier: "",
+      warehouse: "",
+      currencyRate: 1,
+      transportCharges: 0,
+      loadingCharges: 0,
+      taxCode: ""
+    });
+    setRows([]);
+    setOpen(true);
+  };
+  const handleEdit = (po) => {
+    setEditingId(po._id);
+    setViewMode(false);
+    reset({
+      date: po.date.split("T")[0],
+      supplier: po.supplier?._id,
+      warehouse: po.warehouse,
+      currencyRate: po.currencyRate,
+      transportCharges: po.transportCharges,
+      loadingCharges: po.loadingCharges,
+      taxCode: po.taxCode
+    });
+    setRows(po.items);
+    setOpen(true);
+  };
+  const handleView = (po) => {
+    handleEdit(po);
+    setViewMode(true);
+  };
+  const handleDownload = (po) => {
+    toast.info(`Generating Document for ${po.docNo}`);
+    window.print();
+  };
+  const addRow = () => setRows([...rows, {
+    itemId: "",
+    itemName: "",
+    unit: "",
+    quantity: 1,
+    rate: 0,
+    amount: 0
+  }]);
+  const handleItemSelect = (index, id) => {
+    const itm = items2.find((i) => i._id === id);
+    const n = [...rows];
+    if (itm) {
+      n[index] = {
+        ...n[index],
+        itemId: id,
+        itemName: itm.name,
+        unit: itm.unit,
+        rate: itm.purchaseRate || 0,
+        amount: (itm.purchaseRate || 0) * n[index].quantity
+      };
+      setRows(n);
+    }
+  };
+  const subTotal = rows.reduce((acc, r) => acc + (r.amount || 0), 0);
+  const tax = taxCodes2.find((t) => t._id === watchCharges[2]);
+  const taxAmount = (subTotal + Number(watchCharges[0] || 0) + Number(watchCharges[1] || 0)) * ((tax?.totalRate || 0) / 100);
+  const total = subTotal + Number(watchCharges[0] || 0) + Number(watchCharges[1] || 0) + taxAmount;
+  const onSubmit = async (data) => {
+    const payload = {
+      ...data,
+      items: rows.map((r) => ({
+        ...r,
+        item: r.itemId || r.item
+      })),
+      subTotal,
+      taxAmount,
+      grandTotal: total
+    };
+    const token = localStorage.getItem("token");
+    const url = editingId ? `/api/purchase/${editingId}` : "/api/purchase";
+    const method = editingId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      toast.success("Saved Successfully!");
+      setOpen(false);
+      fetchHistory(1);
+    }
+  };
+  const fmt = (val) => new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR"
+  }).format(val);
+  return /* @__PURE__ */ jsxs("div", {
+    className: "space-y-6",
+    children: [/* @__PURE__ */ jsxs("div", {
+      className: "flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border gap-4",
+      children: [/* @__PURE__ */ jsx("h2", {
+        className: "text-xl font-bold text-slate-800 dark:text-white uppercase tracking-tight",
+        children: "Purchase Orders"
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex items-center gap-3 w-full md:w-auto",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "relative flex-1 md:w-80",
+          children: [/* @__PURE__ */ jsx(Search, {
+            className: "absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+          }), /* @__PURE__ */ jsx(Input, {
+            placeholder: "Search PO Number...",
+            className: "pl-10 h-10 bg-slate-50 dark:bg-slate-800 border-none"
+          })]
+        }), /* @__PURE__ */ jsx(Button, {
+          variant: "ghost",
+          size: "icon",
+          className: "h-10 w-10 border",
+          onClick: () => fetchHistory(1),
+          children: /* @__PURE__ */ jsx(RefreshCcw, {
+            size: 18
+          })
+        }), /* @__PURE__ */ jsxs(Button, {
+          onClick: handleAdd,
+          className: "bg-[#2196F3] hover:bg-[#1976D2] text-white h-10 px-6 font-bold shadow-md",
+          children: [/* @__PURE__ */ jsx(Plus, {
+            className: "mr-2 h-4 w-4"
+          }), " Add"]
+        })]
+      })]
+    }), /* @__PURE__ */ jsx(Dialog, {
+      open,
+      onOpenChange: setOpen,
+      children: /* @__PURE__ */ jsxs(DialogContent, {
+        className: "sm:max-w-[900px] max-h-[90vh] overflow-y-auto",
+        children: [/* @__PURE__ */ jsx(DialogHeader, {
+          children: /* @__PURE__ */ jsx(DialogTitle, {
+            children: viewMode ? "PO Preview" : editingId ? "Edit Purchase Order" : "New Purchase Order"
+          })
+        }), /* @__PURE__ */ jsxs("form", {
+          onSubmit: handleSubmit(onSubmit),
+          className: "space-y-6",
+          children: [/* @__PURE__ */ jsxs("fieldset", {
+            disabled: viewMode,
+            className: "space-y-6",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Date"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "date",
+                  ...register2("date")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Supplier"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "supplier",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: suppliers2.map((s) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: s._id,
+                        children: s.name
+                      }, s._id))
+                    })]
+                  })
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Warehouse"
+                }), /* @__PURE__ */ jsx(Controller, {
+                  name: "warehouse",
+                  control,
+                  render: ({
+                    field
+                  }) => /* @__PURE__ */ jsxs(Select, {
+                    onValueChange: field.onChange,
+                    value: field.value,
+                    children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                      children: /* @__PURE__ */ jsx(SelectValue, {
+                        placeholder: "Select"
+                      })
+                    }), /* @__PURE__ */ jsx(SelectContent, {
+                      children: warehouses2.map((w) => /* @__PURE__ */ jsx(SelectItem, {
+                        value: w._id,
+                        children: w.name
+                      }, w._id))
+                    })]
+                  })
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Exch. Rate"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "number",
+                  step: "0.01",
+                  ...register2("currencyRate")
+                })]
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "border rounded-md overflow-hidden",
+              children: [/* @__PURE__ */ jsxs(Table, {
+                children: [/* @__PURE__ */ jsx(TableHeader, {
+                  children: /* @__PURE__ */ jsxs(TableRow, {
+                    className: "bg-slate-100 dark:bg-slate-800",
+                    children: [/* @__PURE__ */ jsx(TableHead, {
+                      children: "Item"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Qty"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      children: "Rate"
+                    }), /* @__PURE__ */ jsx(TableHead, {
+                      className: "text-right",
+                      children: "Total"
+                    }), !viewMode && /* @__PURE__ */ jsx(TableHead, {})]
+                  })
+                }), /* @__PURE__ */ jsx(TableBody, {
+                  children: rows.map((row, i) => /* @__PURE__ */ jsxs(TableRow, {
+                    children: [/* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsxs(Select, {
+                        onValueChange: (v) => handleItemSelect(i, v),
+                        value: row.itemId || row.item,
+                        disabled: viewMode,
+                        children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                          className: "h-8",
+                          children: /* @__PURE__ */ jsx(SelectValue, {
+                            placeholder: "Item"
+                          })
+                        }), /* @__PURE__ */ jsx(SelectContent, {
+                          children: items2.map((it) => /* @__PURE__ */ jsx(SelectItem, {
+                            value: it._id,
+                            children: it.name
+                          }, it._id))
+                        })]
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "h-8 w-20",
+                        value: row.quantity,
+                        onChange: (e) => {
+                          const n = [...rows];
+                          n[i].quantity = Number(e.target.value);
+                          n[i].amount = n[i].quantity * n[i].rate;
+                          setRows(n);
+                        }
+                      })
+                    }), /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Input, {
+                        type: "number",
+                        className: "h-8 w-24",
+                        value: row.rate,
+                        onChange: (e) => {
+                          const n = [...rows];
+                          n[i].rate = Number(e.target.value);
+                          n[i].amount = n[i].quantity * n[i].rate;
+                          setRows(n);
+                        }
+                      })
+                    }), /* @__PURE__ */ jsxs(TableCell, {
+                      className: "text-right font-bold",
+                      children: ["₹", row.amount?.toFixed(2)]
+                    }), !viewMode && /* @__PURE__ */ jsx(TableCell, {
+                      children: /* @__PURE__ */ jsx(Button, {
+                        variant: "ghost",
+                        size: "icon",
+                        onClick: () => {
+                          const n = [...rows];
+                          n.splice(i, 1);
+                          setRows(n);
+                        },
+                        children: /* @__PURE__ */ jsx(Trash2, {
+                          className: "h-4 w-4 text-red-500"
+                        })
+                      })
+                    })]
+                  }, i))
+                })]
+              }), !viewMode && /* @__PURE__ */ jsx("div", {
+                className: "p-3 flex justify-center border-t",
+                children: /* @__PURE__ */ jsxs(Button, {
+                  type: "button",
+                  variant: "outline",
+                  size: "sm",
+                  onClick: addRow,
+                  className: "border-dashed",
+                  children: [/* @__PURE__ */ jsx(Plus, {
+                    size: 14,
+                    className: "mr-1"
+                  }), " Add Item"]
+                })
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-2 gap-4",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-2",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  children: "Transport"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "number",
+                  ...register2("transportCharges")
+                }), /* @__PURE__ */ jsx(Label, {
+                  children: "Loading"
+                }), /* @__PURE__ */ jsx(Input, {
+                  type: "number",
+                  ...register2("loadingCharges")
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "p-4 bg-slate-50 dark:bg-slate-900 border rounded-lg space-y-2",
+                children: [/* @__PURE__ */ jsxs("div", {
+                  className: "flex justify-between text-sm",
+                  children: [/* @__PURE__ */ jsx("span", {
+                    children: "Basic Amount:"
+                  }), /* @__PURE__ */ jsxs("span", {
+                    className: "font-bold",
+                    children: ["₹", subTotal.toFixed(2)]
+                  })]
+                }), /* @__PURE__ */ jsxs("div", {
+                  className: "flex justify-between items-center gap-4",
+                  children: [/* @__PURE__ */ jsx(Label, {
+                    className: "text-xs",
+                    children: "Tax Scheme:"
+                  }), /* @__PURE__ */ jsx(Controller, {
+                    name: "taxCode",
+                    control,
+                    render: ({
+                      field
+                    }) => /* @__PURE__ */ jsxs(Select, {
+                      onValueChange: field.onChange,
+                      value: field.value,
+                      children: [/* @__PURE__ */ jsx(SelectTrigger, {
+                        className: "h-7 w-28 text-xs",
+                        children: /* @__PURE__ */ jsx(SelectValue, {})
+                      }), /* @__PURE__ */ jsx(SelectContent, {
+                        children: taxCodes2.map((t) => /* @__PURE__ */ jsx(SelectItem, {
+                          value: t._id,
+                          children: t.name
+                        }, t._id))
+                      })]
+                    })
+                  })]
+                }), /* @__PURE__ */ jsxs("div", {
+                  className: "flex justify-between text-lg font-black text-primary border-t pt-2",
+                  children: [/* @__PURE__ */ jsx("span", {
+                    children: "Total Amount:"
+                  }), /* @__PURE__ */ jsxs("span", {
+                    children: ["₹", total.toFixed(2)]
+                  })]
+                })]
+              })]
+            })]
+          }), !viewMode && /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            disabled: isSubmitting,
+            className: "w-full bg-primary h-12 text-lg font-bold uppercase tracking-widest",
+            children: editingId ? "Update Order" : "Generate Purchase Order"
+          })]
+        })]
+      })
+    }), /* @__PURE__ */ jsx("div", {
+      className: "grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 pb-10",
+      children: history.map((po) => /* @__PURE__ */ jsx(Card, {
+        className: "overflow-hidden border shadow-sm hover:shadow-xl transition-all duration-300 group bg-white dark:bg-slate-900",
+        children: /* @__PURE__ */ jsxs(CardContent, {
+          className: "p-0",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "p-4 flex justify-between items-center border-b bg-slate-50/50 dark:bg-slate-800/50",
+            children: [/* @__PURE__ */ jsx("span", {
+              className: "font-black text-slate-800 dark:text-white text-sm tracking-tight",
+              children: po.docNo
+            }), /* @__PURE__ */ jsx("span", {
+              className: "text-[11px] font-bold text-slate-500",
+              children: format(new Date(po.date), "dd-MMM-yyyy")
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "p-5 space-y-3",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-start gap-2",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase mt-0.5",
+                children: "Supplier:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-800 dark:text-slate-200 text-sm text-right truncate flex-1",
+                children: po.supplier?.name || "N/A"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Basic Amount:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-700 dark:text-slate-300 text-sm",
+                children: fmt(po.subTotal || 0)
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Tax Amount:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-bold text-slate-700 dark:text-slate-300 text-sm",
+                children: fmt(po.taxAmount || 0)
+              })]
+            }), /* @__PURE__ */ jsx(Separator, {
+              className: "opacity-50"
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-xs text-slate-900 dark:text-white font-black uppercase",
+                children: "Total Amount:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: "font-black text-primary text-base",
+                children: fmt(po.grandTotal || 0)
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex justify-between items-center pt-1",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-[10px] text-slate-400 font-black uppercase",
+                children: "Order Status:"
+              }), /* @__PURE__ */ jsx("span", {
+                className: cn("font-black text-[10px] uppercase px-2 py-0.5 rounded", po.status === "Pending" ? "bg-yellow-50 text-yellow-600" : po.status === "Received" ? "bg-green-50 text-green-600" : "bg-blue-50 text-blue-600"),
+                children: po.status || "Open"
+              })]
+            })]
+          }), /* @__PURE__ */ jsxs("div", {
+            className: "bg-slate-50 dark:bg-slate-800/80 border-t p-2 flex justify-around items-center",
+            children: [/* @__PURE__ */ jsx(Button, {
+              onClick: () => handleView(po),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Eye, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleEdit(po),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(Pencil, {
+                size: 18
+              })
+            }), /* @__PURE__ */ jsx(Button, {
+              onClick: () => handleDownload(po),
+              variant: "ghost",
+              size: "icon",
+              className: "h-9 w-9 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-full transition-colors",
+              children: /* @__PURE__ */ jsx(CloudDownload, {
+                size: 18
+              })
+            })]
+          })]
+        })
+      }, po._id))
+    }), /* @__PURE__ */ jsxs("div", {
+      className: "flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-lg border shadow-sm",
+      children: [/* @__PURE__ */ jsxs("div", {
+        className: "text-xs text-slate-500 font-medium italic",
+        children: ["Showing page ", page, " of ", totalPages]
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "flex gap-2",
+        children: [/* @__PURE__ */ jsxs(Button, {
+          variant: "outline",
+          size: "sm",
+          onClick: () => fetchHistory(page - 1),
+          disabled: page <= 1,
+          className: "h-8 shadow-sm",
+          children: [/* @__PURE__ */ jsx(ChevronLeft, {
+            className: "h-4 w-4"
+          }), " Previous"]
+        }), /* @__PURE__ */ jsxs(Button, {
+          variant: "outline",
+          size: "sm",
+          onClick: () => fetchHistory(page + 1),
+          disabled: page >= totalPages,
+          className: "h-8 shadow-sm",
+          children: ["Next ", /* @__PURE__ */ jsx(ChevronRight, {
+            className: "h-4 w-4"
+          })]
+        })]
+      })]
+    })]
+  });
+});
+const route30 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: purchaseOrder,
+  meta: meta$2
+}, Symbol.toStringTag, { value: "Module" }));
+const authLayout = UNSAFE_withComponentProps(function AuthLayout() {
+  return (
+    // min-h-svh ensures it fills the mobile screen correctly (Small Viewport Height)
+    /* @__PURE__ */ jsx("div", {
+      className: "min-h-svh w-full bg-white dark:bg-slate-950 font-sans antialiased",
+      children: /* @__PURE__ */ jsx(Outlet, {})
+    })
+  );
+});
+const route31 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
   default: authLayout
 }, Symbol.toStringTag, { value: "Module" }));
 function meta$1({}) {
   return [{
-    title: "Login - ScaffRent"
+    title: "Login | ScaffRent ERP"
   }];
 }
 const loginSchema = z.object({
@@ -10119,110 +12550,160 @@ const login = UNSAFE_withComponentProps(function Login() {
         return;
       }
       localStorage.setItem("token", result.token);
-      localStorage.setItem("user", JSON.stringify({
-        email: result.email,
-        userCode: result.userCode
-      }));
-      toast.success("Login Successful");
+      localStorage.setItem("user", JSON.stringify(result));
+      toast.success("Welcome back!");
       navigate("/");
     } catch (error) {
-      console.error("Login Error:", error);
-      toast.error("Connection failed. Is backend running?");
+      toast.error("Connection failed.");
     }
   };
-  return /* @__PURE__ */ jsxs(Card, {
-    className: "shadow-xl border-slate-200",
-    children: [/* @__PURE__ */ jsxs(CardHeader, {
-      className: "space-y-1",
-      children: [/* @__PURE__ */ jsx(CardTitle, {
-        className: "text-2xl font-bold text-center",
-        children: "Welcome back"
-      }), /* @__PURE__ */ jsx(CardDescription, {
-        className: "text-center",
-        children: "Enter your User Code to access your account"
-      })]
-    }), /* @__PURE__ */ jsx(CardContent, {
-      children: /* @__PURE__ */ jsxs("form", {
-        onSubmit: handleSubmit(onSubmit),
-        className: "space-y-4",
+  return /* @__PURE__ */ jsxs("div", {
+    className: "flex min-h-screen w-full",
+    children: [/* @__PURE__ */ jsxs("div", {
+      className: "hidden lg:flex lg:w-[45%] bg-primary relative p-12 flex-col justify-between text-white overflow-hidden",
+      children: [/* @__PURE__ */ jsx("div", {
+        className: "absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px]"
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "relative z-10 flex items-center gap-2",
+        children: [/* @__PURE__ */ jsx("div", {
+          className: "h-10 w-10 bg-white rounded-xl flex items-center justify-center text-primary font-black text-xl",
+          children: "S"
+        }), /* @__PURE__ */ jsx("span", {
+          className: "text-2xl font-black tracking-tighter uppercase italic",
+          children: "ScaffRent"
+        })]
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "relative z-10 space-y-6",
+        children: [/* @__PURE__ */ jsxs("h1", {
+          className: "text-5xl font-extrabold leading-[1.1] tracking-tight",
+          children: ["Manage Assets with ", /* @__PURE__ */ jsx("br", {}), " ", /* @__PURE__ */ jsx("span", {
+            className: "text-orange-200",
+            children: "Total Control."
+          })]
+        }), /* @__PURE__ */ jsx("p", {
+          className: "text-lg text-white/80 max-w-md",
+          children: "The modern ERP solution for scaffolding rentals, inventory, and site logistics."
+        })]
+      }), /* @__PURE__ */ jsxs("div", {
+        className: "relative z-10 flex gap-8",
         children: [/* @__PURE__ */ jsxs("div", {
-          className: "space-y-2",
-          children: [/* @__PURE__ */ jsx(Label, {
-            htmlFor: "userCode",
-            children: "User Code"
-          }), /* @__PURE__ */ jsx(Input, {
-            id: "userCode",
-            placeholder: "e.g. USR-1001",
-            ...register2("userCode"),
-            className: errors.userCode ? "border-red-500" : ""
-          }), errors.userCode && /* @__PURE__ */ jsx("span", {
-            className: "text-xs text-red-500",
-            children: errors.userCode.message
+          className: "flex items-center gap-2 text-sm font-medium",
+          children: [/* @__PURE__ */ jsx(BarChart3, {
+            size: 18
+          }), " Real-time Data"]
+        }), /* @__PURE__ */ jsxs("div", {
+          className: "flex items-center gap-2 text-sm font-medium",
+          children: [/* @__PURE__ */ jsx(ShieldCheck, {
+            size: 18
+          }), " Secure & Audited"]
+        })]
+      })]
+    }), /* @__PURE__ */ jsx("div", {
+      className: "flex-1 flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-950",
+      children: /* @__PURE__ */ jsxs("div", {
+        className: "w-full max-w-[400px] space-y-8 animate-login-card",
+        children: [/* @__PURE__ */ jsxs("div", {
+          className: "lg:hidden flex items-center gap-2 mb-8",
+          children: [/* @__PURE__ */ jsx("div", {
+            className: "h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-white font-black",
+            children: "S"
+          }), /* @__PURE__ */ jsx("span", {
+            className: "font-black text-xl tracking-tighter uppercase text-slate-900 dark:text-white",
+            children: "ScaffRent"
           })]
         }), /* @__PURE__ */ jsxs("div", {
           className: "space-y-2",
-          children: [/* @__PURE__ */ jsxs("div", {
-            className: "flex items-center justify-between",
-            children: [/* @__PURE__ */ jsx(Label, {
-              htmlFor: "password",
-              children: "Password"
-            }), /* @__PURE__ */ jsx(Link$1, {
-              to: "#",
-              className: "text-xs text-orange-600 hover:underline",
-              children: "Forgot password?"
-            })]
-          }), /* @__PURE__ */ jsx(Input, {
-            id: "password",
-            type: "password",
-            ...register2("password"),
-            className: errors.password ? "border-red-500" : ""
-          }), errors.password && /* @__PURE__ */ jsx("span", {
-            className: "text-xs text-red-500",
-            children: errors.password.message
+          children: [/* @__PURE__ */ jsx("h2", {
+            className: "text-3xl font-bold tracking-tight text-slate-900 dark:text-white",
+            children: "Sign In"
+          }), /* @__PURE__ */ jsx("p", {
+            className: "text-slate-500 text-sm",
+            children: "Enter your system credentials to proceed."
           })]
-        }), /* @__PURE__ */ jsx(Button, {
-          type: "submit",
-          className: "hover-card-glow w-full bg-slate-900 hover:bg-slate-800",
-          disabled: isSubmitting,
-          children: isSubmitting ? /* @__PURE__ */ jsx(Loader2, {
-            className: "mr-2 h-4 w-4 animate-spin"
-          }) : "Sign In"
-        })]
-      })
-    }), /* @__PURE__ */ jsx(CardFooter, {
-      className: "flex flex-col gap-4 text-center text-sm",
-      children: /* @__PURE__ */ jsxs("div", {
-        className: "text-slate-500",
-        children: ["Don't have an account?", " ", /* @__PURE__ */ jsx(Link$1, {
-          to: "/register",
-          className: "font-semibold text-orange-600 hover:underline",
-          children: "Register Company"
+        }), /* @__PURE__ */ jsxs("form", {
+          onSubmit: handleSubmit(onSubmit),
+          className: "space-y-5",
+          children: [/* @__PURE__ */ jsxs("div", {
+            className: "space-y-4",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "space-y-2",
+              children: [/* @__PURE__ */ jsx(Label, {
+                htmlFor: "userCode",
+                children: "User Code"
+              }), /* @__PURE__ */ jsx(Input, {
+                id: "userCode",
+                autoFocus: true,
+                placeholder: "USR-1001",
+                ...register2("userCode"),
+                className: "h-12 bg-white dark:bg-slate-900 border-slate-200"
+              }), errors.userCode && /* @__PURE__ */ jsx("p", {
+                className: "text-xs text-red-500 font-medium",
+                children: errors.userCode.message
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "space-y-2",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "flex items-center justify-between",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  htmlFor: "password",
+                  children: "Password"
+                }), /* @__PURE__ */ jsx(Link$1, {
+                  to: "#",
+                  className: "text-xs font-bold text-primary hover:underline",
+                  children: "Forgot?"
+                })]
+              }), /* @__PURE__ */ jsx(Input, {
+                id: "password",
+                type: "password",
+                placeholder: "••••••••",
+                ...register2("password"),
+                className: "h-12 bg-white dark:bg-slate-900 border-slate-200"
+              })]
+            })]
+          }), /* @__PURE__ */ jsx(Button, {
+            type: "submit",
+            disabled: isSubmitting,
+            className: "w-full h-12 text-base font-bold bg-primary shadow-lg shadow-primary/20",
+            children: isSubmitting ? /* @__PURE__ */ jsx(Loader2, {
+              className: "mr-2 h-4 w-4 animate-spin"
+            }) : "Sign In to ERP"
+          })]
+        }), /* @__PURE__ */ jsxs("p", {
+          className: "text-center text-sm text-slate-500",
+          children: ["Need a workspace?", " ", /* @__PURE__ */ jsxs(Link$1, {
+            to: "/register",
+            className: "font-bold text-primary hover:underline inline-flex items-center gap-1",
+            children: ["Create Account ", /* @__PURE__ */ jsx(ChevronRight, {
+              size: 14
+            })]
+          })]
         })]
       })
     })]
   });
 });
-const route28 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route32 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: login,
   meta: meta$1
 }, Symbol.toStringTag, { value: "Module" }));
 function meta({}) {
   return [{
-    title: "Register - ScaffRent"
+    title: "Register | ScaffRent ERP"
   }];
 }
 const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  mobile: z.string().min(10, "Mobile number must be at least 10 digits"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(2, "Name required"),
+  email: z.string().email("Invalid email"),
+  mobile: z.string().length(10, "Mobile must be 10 digits"),
+  password: z.string().min(6, "Password too short"),
   confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
+}).refine((d) => d.password === d.confirmPassword, {
+  message: "Passwords mismatch",
   path: ["confirmPassword"]
 });
 const register = UNSAFE_withComponentProps(function Register() {
-  const [generatedUserCode, setGeneratedUserCode] = useState(null);
+  const [code, setCode] = useState(null);
   const {
     register: register2,
     handleSubmit,
@@ -10234,181 +12715,170 @@ const register = UNSAFE_withComponentProps(function Register() {
     resolver: zodResolver(registerSchema)
   });
   const onSubmit = async (data) => {
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email: data.email,
-          mobile: data.mobile,
-          password: data.password
-        })
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        toast.error(result.message || "Registration Failed");
-        return;
-      }
-      setGeneratedUserCode(result.userCode);
-      toast.success("Account Created Successfully!");
-    } catch (error) {
-      toast.error("Network Error");
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (res.ok) {
+      setCode(result.userCode);
+      toast.success("Success!");
+    } else {
+      toast.error(result.message);
     }
   };
-  if (generatedUserCode) {
-    return /* @__PURE__ */ jsxs(Card, {
-      className: "shadow-xl border-green-200 bg-green-50/50",
-      children: [/* @__PURE__ */ jsxs(CardHeader, {
-        className: "text-center",
-        children: [/* @__PURE__ */ jsx("div", {
-          className: "mx-auto h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mb-2",
-          children: /* @__PURE__ */ jsx(CheckCircle2, {
-            className: "h-6 w-6 text-green-600"
-          })
-        }), /* @__PURE__ */ jsx(CardTitle, {
-          className: "text-2xl text-green-900",
-          children: "Registration Successful!"
-        }), /* @__PURE__ */ jsx(CardDescription, {
-          className: "text-green-700",
-          children: "Your account has been created."
-        })]
-      }), /* @__PURE__ */ jsxs(CardContent, {
-        className: "space-y-4",
-        children: [/* @__PURE__ */ jsxs("div", {
-          className: "bg-white p-4 rounded-lg border border-green-200 text-center",
-          children: [/* @__PURE__ */ jsx("p", {
-            className: "text-sm text-slate-500 mb-1",
-            children: "Your Login User Code"
+  return /* @__PURE__ */ jsx("div", {
+    className: "flex min-h-screen w-full bg-slate-50 dark:bg-slate-950",
+    children: /* @__PURE__ */ jsx("div", {
+      className: "flex-1 flex flex-col items-center justify-center p-6",
+      children: /* @__PURE__ */ jsx("div", {
+        className: "w-full max-w-[550px] animate-login-card",
+        children: code ? /* @__PURE__ */ jsxs("div", {
+          className: "bg-white dark:bg-slate-900 p-10 rounded-[2rem] shadow-2xl border border-green-100 text-center space-y-6",
+          children: [/* @__PURE__ */ jsx("div", {
+            className: "mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center text-green-600",
+            children: /* @__PURE__ */ jsx(CheckCircle2, {
+              size: 32
+            })
+          }), /* @__PURE__ */ jsx("h2", {
+            className: "text-3xl font-bold",
+            children: "Registration Complete"
           }), /* @__PURE__ */ jsxs("div", {
-            className: "flex items-center justify-center gap-2",
-            children: [/* @__PURE__ */ jsx("span", {
-              className: "text-3xl font-mono font-bold text-slate-900 tracking-wider",
-              children: generatedUserCode
-            }), /* @__PURE__ */ jsx(Button, {
-              variant: "ghost",
-              size: "icon",
-              className: "h-8 w-8",
-              onClick: () => {
-                navigator.clipboard.writeText(generatedUserCode);
-                toast.success("Copied to clipboard");
-              },
-              children: /* @__PURE__ */ jsx(Copy, {
-                className: "h-4 w-4 text-slate-400"
-              })
+            className: "p-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-dashed border-slate-200",
+            children: [/* @__PURE__ */ jsx("p", {
+              className: "text-xs font-bold text-slate-400 uppercase tracking-widest mb-2",
+              children: "Your System User ID"
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "flex items-center justify-center gap-3",
+              children: [/* @__PURE__ */ jsx("span", {
+                className: "text-4xl font-mono font-black text-primary",
+                children: code
+              }), /* @__PURE__ */ jsx(Button, {
+                variant: "ghost",
+                size: "icon",
+                onClick: () => {
+                  navigator.clipboard.writeText(code);
+                  toast.success("Copied!");
+                },
+                children: /* @__PURE__ */ jsx(Copy, {
+                  size: 18
+                })
+              })]
             })]
-          }), /* @__PURE__ */ jsx("p", {
-            className: "text-xs text-slate-400 mt-2",
-            children: "Please save this code to log in."
+          }), /* @__PURE__ */ jsx(Link$1, {
+            to: "/login",
+            className: "block w-full",
+            children: /* @__PURE__ */ jsxs(Button, {
+              className: "w-full h-12 bg-primary text-lg",
+              children: ["Sign In ", /* @__PURE__ */ jsx(ArrowRight, {
+                className: "ml-2",
+                size: 18
+              })]
+            })
           })]
-        }), /* @__PURE__ */ jsx(Link$1, {
-          to: "/login",
-          className: "block",
-          children: /* @__PURE__ */ jsx(Button, {
-            className: "w-full bg-green-600 hover:bg-green-700",
-            children: "Go to Login"
-          })
-        })]
-      })]
-    });
-  }
-  return /* @__PURE__ */ jsxs(Card, {
-    className: "shadow-xl border-slate-200",
-    children: [/* @__PURE__ */ jsxs(CardHeader, {
-      className: "space-y-1",
-      children: [/* @__PURE__ */ jsx(CardTitle, {
-        className: "text-2xl font-bold text-center",
-        children: "Create an Account"
-      }), /* @__PURE__ */ jsx(CardDescription, {
-        className: "text-center",
-        children: "Register your company to start managing rentals"
-      })]
-    }), /* @__PURE__ */ jsx(CardContent, {
-      children: /* @__PURE__ */ jsxs("form", {
-        onSubmit: handleSubmit(onSubmit),
-        className: "space-y-4",
-        children: [/* @__PURE__ */ jsxs("div", {
-          className: "space-y-2",
-          children: [/* @__PURE__ */ jsx(Label, {
-            htmlFor: "email",
-            children: "Email"
-          }), /* @__PURE__ */ jsx(Input, {
-            id: "email",
-            type: "email",
-            placeholder: "admin@company.com",
-            ...register2("email")
-          }), errors.email && /* @__PURE__ */ jsx("span", {
-            className: "text-xs text-red-500",
-            children: errors.email.message
-          })]
-        }), /* @__PURE__ */ jsxs("div", {
-          className: "space-y-2",
-          children: [/* @__PURE__ */ jsx(Label, {
-            htmlFor: "mobile",
-            children: "Mobile"
-          }), /* @__PURE__ */ jsx(Input, {
-            id: "mobile",
-            placeholder: "9876543210",
-            ...register2("mobile")
-          }), errors.mobile && /* @__PURE__ */ jsx("span", {
-            className: "text-xs text-red-500",
-            children: errors.mobile.message
-          })]
-        }), /* @__PURE__ */ jsxs("div", {
-          className: "grid grid-cols-2 gap-4",
+        }) : /* @__PURE__ */ jsxs("div", {
+          className: "bg-white dark:bg-slate-900 p-8 sm:p-12 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 space-y-8",
           children: [/* @__PURE__ */ jsxs("div", {
             className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              htmlFor: "password",
-              children: "Password"
-            }), /* @__PURE__ */ jsx(Input, {
-              id: "password",
-              type: "password",
-              ...register2("password")
-            }), errors.password && /* @__PURE__ */ jsx("span", {
-              className: "text-xs text-red-500",
-              children: errors.password.message
+            children: [/* @__PURE__ */ jsx("h2", {
+              className: "text-3xl font-bold tracking-tight",
+              children: "Create Account"
+            }), /* @__PURE__ */ jsx("p", {
+              className: "text-slate-500",
+              children: "Join ScaffRent ERP and automate your workflow."
             })]
-          }), /* @__PURE__ */ jsxs("div", {
-            className: "space-y-2",
-            children: [/* @__PURE__ */ jsx(Label, {
-              htmlFor: "confirmPassword",
-              children: "Confirm"
-            }), /* @__PURE__ */ jsx(Input, {
-              id: "confirmPassword",
-              type: "password",
-              ...register2("confirmPassword")
-            }), errors.confirmPassword && /* @__PURE__ */ jsx("span", {
-              className: "text-xs text-red-500",
-              children: errors.confirmPassword.message
+          }), /* @__PURE__ */ jsxs("form", {
+            onSubmit: handleSubmit(onSubmit),
+            className: "space-y-5",
+            children: [/* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-1 sm:grid-cols-2 gap-4",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1.5",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  className: "text-xs font-bold uppercase tracking-wider text-slate-500",
+                  children: "Full Name"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("name"),
+                  className: "h-11 bg-slate-50 dark:bg-slate-800 border-none",
+                  placeholder: "John Doe"
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1.5",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  className: "text-xs font-bold uppercase tracking-wider text-slate-500",
+                  children: "Mobile"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("mobile"),
+                  className: "h-11 bg-slate-50 dark:bg-slate-800 border-none",
+                  placeholder: "9876543210"
+                })]
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "space-y-1.5",
+              children: [/* @__PURE__ */ jsx(Label, {
+                className: "text-xs font-bold uppercase tracking-wider text-slate-500",
+                children: "Business Email"
+              }), /* @__PURE__ */ jsx(Input, {
+                ...register2("email"),
+                type: "email",
+                className: "h-11 bg-slate-50 dark:bg-slate-800 border-none",
+                placeholder: "admin@company.com"
+              })]
+            }), /* @__PURE__ */ jsxs("div", {
+              className: "grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2",
+              children: [/* @__PURE__ */ jsxs("div", {
+                className: "space-y-1.5",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  className: "text-xs font-bold uppercase tracking-wider text-slate-500",
+                  children: "Password"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("password"),
+                  type: "password",
+                  placeholder: "••••••",
+                  className: "h-11 bg-slate-50 dark:bg-slate-800 border-none"
+                })]
+              }), /* @__PURE__ */ jsxs("div", {
+                className: "space-y-1.5",
+                children: [/* @__PURE__ */ jsx(Label, {
+                  className: "text-xs font-bold uppercase tracking-wider text-slate-500",
+                  children: "Confirm"
+                }), /* @__PURE__ */ jsx(Input, {
+                  ...register2("confirmPassword"),
+                  type: "password",
+                  placeholder: "••••••",
+                  className: "h-11 bg-slate-50 dark:bg-slate-800 border-none"
+                })]
+              })]
+            }), /* @__PURE__ */ jsx(Button, {
+              type: "submit",
+              disabled: isSubmitting,
+              className: "w-full h-12 bg-primary text-base font-bold mt-4 shadow-lg shadow-primary/20",
+              children: isSubmitting ? /* @__PURE__ */ jsx(Loader2, {
+                className: "animate-spin mr-2"
+              }) : "Register Organization"
+            })]
+          }), /* @__PURE__ */ jsxs("p", {
+            className: "text-center text-sm text-slate-500",
+            children: ["Already registered? ", /* @__PURE__ */ jsx(Link$1, {
+              to: "/login",
+              className: "font-bold text-primary hover:underline",
+              children: "Sign In"
             })]
           })]
-        }), /* @__PURE__ */ jsx(Button, {
-          type: "submit",
-          className: "hover-card-glow w-full bg-orange-600 hover:bg-orange-700",
-          disabled: isSubmitting,
-          children: isSubmitting ? /* @__PURE__ */ jsx(Loader2, {
-            className: "mr-2 h-4 w-4 animate-spin"
-          }) : "Register"
-        })]
+        })
       })
-    }), /* @__PURE__ */ jsxs(CardFooter, {
-      className: "text-center text-sm justify-center text-slate-500",
-      children: ["Already have an account?", " ", /* @__PURE__ */ jsx(Link$1, {
-        to: "/login",
-        className: "font-semibold text-slate-900 hover:underline ml-1",
-        children: "Sign In"
-      })]
-    })]
+    })
   });
 });
-const route29 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const route33 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   default: register,
   meta
 }, Symbol.toStringTag, { value: "Module" }));
-const serverManifest = { "entry": { "module": "/assets/entry.client-DNLpXWPL.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/index-BlD4RAcs.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": true, "module": "/assets/root-9r71CXH6.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/index-BlD4RAcs.js"], "css": ["/assets/root-8NaK8KX8.css"], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/dashboard-layout": { "id": "routes/dashboard-layout", "parentId": "root", "path": void 0, "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/dashboard-layout-DwEq4kNP.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/avatar-CM-enk-h.js", "/assets/button-DJOGF8lk.js", "/assets/loader-circle-CG5p7_HW.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/triangle-alert-DFymwYj8.js", "/assets/circle-check-BAn0kiHJ.js", "/assets/utils-B7JaLIXj.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-BlD4RAcs.js", "/assets/index-DxQ1XJrd.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-CvAHIQQn.js", "/assets/chevron-right-LVjP8CF0.js", "/assets/index-DJmqDzNu.js", "/assets/users-Bd0q_q3f.js", "/assets/store-DW8bus8R.js", "/assets/map-pin-Cnwq43Sx.js", "/assets/layers-BWqs2hp3.js", "/assets/warehouse-BbVgCgdG.js", "/assets/percent-DJnI6Z-h.js", "/assets/scale-qAx9iPkM.js", "/assets/truck-BvnvxsX0.js", "/assets/building-2-DjEAMQSJ.js", "/assets/settings-Vj1aZoCz.js", "/assets/user-D_hQC2fz.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/home": { "id": "routes/home", "parentId": "routes/dashboard-layout", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/home-DsxB8kfb.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/card-D15KGoiH.js", "/assets/avatar-CM-enk-h.js", "/assets/utils-B7JaLIXj.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/users-Bd0q_q3f.js", "/assets/index-BlD4RAcs.js", "/assets/arrow-up-right-C9pUrZEM.js", "/assets/index-DgtmhsrH.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/company": { "id": "routes/company", "parentId": "routes/dashboard-layout", "path": "company", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/company-C7M3YDGE.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/validators-y24I4gES.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/customers": { "id": "routes/customers", "parentId": "routes/dashboard-layout", "path": "customers", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/customers-B9VfYX8c.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/dialog-DmvohqaA.js", "/assets/select-C51JiXvi.js", "/assets/tabs-yHIkDuZH.js", "/assets/validators-y24I4gES.js", "/assets/plus-2VTDJud4.js", "/assets/credit-card-BESdmjLc.js", "/assets/truck-BvnvxsX0.js", "/assets/user-D_hQC2fz.js", "/assets/phone-BP9WL7bk.js", "/assets/map-pin-Cnwq43Sx.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js", "/assets/index-D8PbbR5n.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/index-CvAHIQQn.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/sites": { "id": "routes/sites", "parentId": "routes/dashboard-layout", "path": "sites", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/sites-CVCpCNfm.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/badge-C5k-Fbw8.js", "/assets/dialog-DmvohqaA.js", "/assets/select-C51JiXvi.js", "/assets/plus-2VTDJud4.js", "/assets/building-2-DjEAMQSJ.js", "/assets/map-pin-Cnwq43Sx.js", "/assets/phone-BP9WL7bk.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js", "/assets/index-D8PbbR5n.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/challans": { "id": "routes/challans", "parentId": "routes/dashboard-layout", "path": "challans", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/challans-DL9Otq66.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/badge-C5k-Fbw8.js", "/assets/dialog-DmvohqaA.js", "/assets/select-C51JiXvi.js", "/assets/table-DKG8Nq2h.js", "/assets/plus-2VTDJud4.js", "/assets/trash-2-Cgnqpp1H.js", "/assets/arrow-up-right-C9pUrZEM.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js", "/assets/index-D8PbbR5n.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/delivery-challans": { "id": "routes/delivery-challans", "parentId": "routes/dashboard-layout", "path": "delivery-challans", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/delivery-challans-14NUUUlh.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/select-C51JiXvi.js", "/assets/table-DKG8Nq2h.js", "/assets/textarea-VFn23AkH.js", "/assets/dialog-DmvohqaA.js", "/assets/badge-C5k-Fbw8.js", "/assets/format-B1sj8RnW.js", "/assets/plus-2VTDJud4.js", "/assets/trash-2-Cgnqpp1H.js", "/assets/user-D_hQC2fz.js", "/assets/map-pin-Cnwq43Sx.js", "/assets/truck-BvnvxsX0.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/employees": { "id": "routes/employees", "parentId": "routes/dashboard-layout", "path": "employees", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/employees-Dc9V6R62.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/badge-C5k-Fbw8.js", "/assets/table-DKG8Nq2h.js", "/assets/card-D15KGoiH.js", "/assets/avatar-CM-enk-h.js", "/assets/dialog-DmvohqaA.js", "/assets/select-C51JiXvi.js", "/assets/plus-2VTDJud4.js", "/assets/phone-BP9WL7bk.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DgtmhsrH.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js", "/assets/index-D8PbbR5n.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/items": { "id": "routes/items", "parentId": "routes/dashboard-layout", "path": "items", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/items-DXfnDQeL.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/badge-C5k-Fbw8.js", "/assets/table-DKG8Nq2h.js", "/assets/select-C51JiXvi.js", "/assets/dialog-DmvohqaA.js", "/assets/validators-y24I4gES.js", "/assets/plus-2VTDJud4.js", "/assets/coerce-CoKk36h9.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/item-groups": { "id": "routes/item-groups", "parentId": "routes/dashboard-layout", "path": "groups", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/item-groups-9_g_A10i.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/dialog-DmvohqaA.js", "/assets/plus-2VTDJud4.js", "/assets/layers-BWqs2hp3.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/vendors": { "id": "routes/vendors", "parentId": "routes/dashboard-layout", "path": "vendors", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/vendors-CFl3iQC-.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/dialog-DmvohqaA.js", "/assets/select-C51JiXvi.js", "/assets/validators-y24I4gES.js", "/assets/plus-2VTDJud4.js", "/assets/credit-card-BESdmjLc.js", "/assets/truck-BvnvxsX0.js", "/assets/store-DW8bus8R.js", "/assets/map-pin-Cnwq43Sx.js", "/assets/phone-BP9WL7bk.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js", "/assets/index-D8PbbR5n.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/warehouses": { "id": "routes/warehouses", "parentId": "routes/dashboard-layout", "path": "warehouses", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/warehouses-1KRs3To6.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/dialog-DmvohqaA.js", "/assets/plus-2VTDJud4.js", "/assets/warehouse-BbVgCgdG.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/currencies": { "id": "routes/currencies", "parentId": "routes/dashboard-layout", "path": "currencies", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/currencies-4X9trmrA.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/card-D15KGoiH.js", "/assets/dialog-DmvohqaA.js", "/assets/select-C51JiXvi.js", "/assets/plus-2VTDJud4.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js", "/assets/index-D8PbbR5n.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/inventory-inward": { "id": "routes/inventory-inward", "parentId": "routes/dashboard-layout", "path": "inventory/inward", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/inventory-inward-DnfGPzAx.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/select-C51JiXvi.js", "/assets/table-DKG8Nq2h.js", "/assets/textarea-VFn23AkH.js", "/assets/search-DMpuD63j.js", "/assets/trash-2-Cgnqpp1H.js", "/assets/plus-2VTDJud4.js", "/assets/save-a7TbwWQM.js", "/assets/format-B1sj8RnW.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/createLucideIcon-LR3f_QN8.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/inventory-outward": { "id": "routes/inventory-outward", "parentId": "routes/dashboard-layout", "path": "inventory/outward", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/inventory-outward-CFN3bx2p.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/select-C51JiXvi.js", "/assets/table-DKG8Nq2h.js", "/assets/textarea-VFn23AkH.js", "/assets/circle-arrow-up-CBXlPBvm.js", "/assets/search-DMpuD63j.js", "/assets/trash-2-Cgnqpp1H.js", "/assets/plus-2VTDJud4.js", "/assets/save-a7TbwWQM.js", "/assets/format-B1sj8RnW.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/createLucideIcon-LR3f_QN8.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/inventory": { "id": "routes/inventory", "parentId": "routes/dashboard-layout", "path": "inventory", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/inventory-HB7Ms6qq.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/select-C51JiXvi.js", "/assets/table-DKG8Nq2h.js", "/assets/textarea-VFn23AkH.js", "/assets/tabs-yHIkDuZH.js", "/assets/badge-C5k-Fbw8.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/circle-arrow-up-CBXlPBvm.js", "/assets/search-DMpuD63j.js", "/assets/trash-2-Cgnqpp1H.js", "/assets/plus-2VTDJud4.js", "/assets/save-a7TbwWQM.js", "/assets/clock-CSYFBwrg.js", "/assets/chevron-left-CEE7dwDr.js", "/assets/chevron-right-LVjP8CF0.js", "/assets/format-B1sj8RnW.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/index-CvAHIQQn.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/fiscal-years": { "id": "routes/fiscal-years", "parentId": "routes/dashboard-layout", "path": "fiscal-years", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/fiscal-years-Dp2DYmnY.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/card-D15KGoiH.js", "/assets/dialog-DmvohqaA.js", "/assets/table-DKG8Nq2h.js", "/assets/format-B1sj8RnW.js", "/assets/utils-B7JaLIXj.js", "/assets/chevron-right-LVjP8CF0.js", "/assets/chevron-left-CEE7dwDr.js", "/assets/index-DH-9tp7w.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DxQ1XJrd.js", "/assets/index-BlD4RAcs.js", "/assets/plus-2VTDJud4.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/circle-check-BAn0kiHJ.js", "/assets/index-DwXCEBPy.js", "/assets/index-DgtmhsrH.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/tax-codes": { "id": "routes/tax-codes", "parentId": "routes/dashboard-layout", "path": "tax-codes", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/tax-codes-BFHGOTmH.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/dialog-DmvohqaA.js", "/assets/plus-2VTDJud4.js", "/assets/percent-DJnI6Z-h.js", "/assets/coerce-CoKk36h9.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/sales": { "id": "routes/sales", "parentId": "routes/dashboard-layout", "path": "sales", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/sales-bjzazyay.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/select-C51JiXvi.js", "/assets/table-DKG8Nq2h.js", "/assets/tabs-yHIkDuZH.js", "/assets/badge-C5k-Fbw8.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/plus-2VTDJud4.js", "/assets/trash-2-Cgnqpp1H.js", "/assets/save-a7TbwWQM.js", "/assets/clock-CSYFBwrg.js", "/assets/chevron-left-CEE7dwDr.js", "/assets/chevron-right-LVjP8CF0.js", "/assets/coerce-CoKk36h9.js", "/assets/format-B1sj8RnW.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/index-CvAHIQQn.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/users": { "id": "routes/users", "parentId": "routes/dashboard-layout", "path": "users", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/users-DTW0EM4A.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/badge-C5k-Fbw8.js", "/assets/dialog-DmvohqaA.js", "/assets/select-C51JiXvi.js", "/assets/plus-2VTDJud4.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js", "/assets/index-D8PbbR5n.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/profile": { "id": "routes/profile", "parentId": "routes/dashboard-layout", "path": "profile", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/profile-DjAa_mz7.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/tabs-yHIkDuZH.js", "/assets/save-a7TbwWQM.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-CvAHIQQn.js", "/assets/index-D8PbbR5n.js", "/assets/index-DxQ1XJrd.js", "/assets/createLucideIcon-LR3f_QN8.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/settings": { "id": "routes/settings", "parentId": "routes/dashboard-layout", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/settings-YF9EDZeW.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/textarea-VFn23AkH.js", "/assets/settings-Vj1aZoCz.js", "/assets/save-a7TbwWQM.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/states": { "id": "routes/states", "parentId": "routes/dashboard-layout", "path": "states", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/states-DqVj74QQ.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/dialog-DmvohqaA.js", "/assets/table-DKG8Nq2h.js", "/assets/loader-circle-CG5p7_HW.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/plus-2VTDJud4.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DwXCEBPy.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-alOY63D0.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/rental-grn": { "id": "routes/rental-grn", "parentId": "routes/dashboard-layout", "path": "rental-grn", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/rental-grn-CU32vKAT.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/select-C51JiXvi.js", "/assets/table-DKG8Nq2h.js", "/assets/textarea-VFn23AkH.js", "/assets/dialog-DmvohqaA.js", "/assets/badge-C5k-Fbw8.js", "/assets/plus-2VTDJud4.js", "/assets/trash-2-Cgnqpp1H.js", "/assets/user-D_hQC2fz.js", "/assets/map-pin-Cnwq43Sx.js", "/assets/format-B1sj8RnW.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/index-DwXCEBPy.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/missing-entries": { "id": "routes/missing-entries", "parentId": "routes/dashboard-layout", "path": "missing-entries", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/missing-entries-DcE_ED_B.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/select-C51JiXvi.js", "/assets/table-DKG8Nq2h.js", "/assets/textarea-VFn23AkH.js", "/assets/dialog-DmvohqaA.js", "/assets/badge-C5k-Fbw8.js", "/assets/plus-2VTDJud4.js", "/assets/triangle-alert-DFymwYj8.js", "/assets/trash-2-Cgnqpp1H.js", "/assets/user-D_hQC2fz.js", "/assets/map-pin-Cnwq43Sx.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/format-B1sj8RnW.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/index-DwXCEBPy.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/adjustments": { "id": "routes/adjustments", "parentId": "routes/dashboard-layout", "path": "adjustments", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/adjustments-CjjLF8R9.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/select-C51JiXvi.js", "/assets/table-DKG8Nq2h.js", "/assets/dialog-DmvohqaA.js", "/assets/badge-C5k-Fbw8.js", "/assets/plus-2VTDJud4.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/trash-2-Cgnqpp1H.js", "/assets/user-D_hQC2fz.js", "/assets/map-pin-Cnwq43Sx.js", "/assets/truck-BvnvxsX0.js", "/assets/scale-qAx9iPkM.js", "/assets/format-B1sj8RnW.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/index-DH-9tp7w.js", "/assets/index-DgtmhsrH.js", "/assets/index-D8PbbR5n.js", "/assets/index-alOY63D0.js", "/assets/index-DTsTNT3G.js", "/assets/index-DJmqDzNu.js", "/assets/index-DwXCEBPy.js", "/assets/index-DxQ1XJrd.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/auth-layout": { "id": "routes/auth-layout", "parentId": "root", "path": void 0, "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/auth-layout-B0ch_4FI.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/login": { "id": "routes/login", "parentId": "routes/auth-layout", "path": "login", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/login-DnrDuM6-.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/loader-circle-CG5p7_HW.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js", "/assets/createLucideIcon-LR3f_QN8.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/register": { "id": "routes/register", "parentId": "routes/auth-layout", "path": "register", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/register-BjgUIt1r.js", "imports": ["/assets/chunk-EPOLDU6W-ChqI0nxY.js", "/assets/label-mxTV5U-j.js", "/assets/schemas-B_p6X6Sd.js", "/assets/button-DJOGF8lk.js", "/assets/input-BQfcJZBc.js", "/assets/card-D15KGoiH.js", "/assets/circle-check-BAn0kiHJ.js", "/assets/createLucideIcon-LR3f_QN8.js", "/assets/loader-circle-CG5p7_HW.js", "/assets/utils-B7JaLIXj.js", "/assets/index-BlD4RAcs.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 } }, "url": "/assets/manifest-88024192.js", "version": "88024192", "sri": void 0 };
+const serverManifest = { "entry": { "module": "/assets/entry.client-AdDcHUv8.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/index-DYDK8zmC.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": true, "module": "/assets/root-C83DP3Kx.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/index-DYDK8zmC.js"], "css": ["/assets/root-CLb3Oq_v.css"], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/dashboard-layout": { "id": "routes/dashboard-layout", "parentId": "root", "path": void 0, "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/dashboard-layout-BXp3G739.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/avatar-CUmbcVlF.js", "/assets/button-Dw_h9cpJ.js", "/assets/loader-circle-CoJBDx0o.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/triangle-alert-DT4_rIZb.js", "/assets/circle-check-Cgt1GJCF.js", "/assets/utils-ADFk-99P.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-DYDK8zmC.js", "/assets/index-CKKpdqlq.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-Cphk0bnP.js", "/assets/chevron-right-vYvrFJf9.js", "/assets/index-D4OBb5rp.js", "/assets/users-C-N4xqcL.js", "/assets/store-C08lDrWY.js", "/assets/map-pin-B5HB5Enc.js", "/assets/layers-b8io3x0R.js", "/assets/warehouse-4nSR0qd-.js", "/assets/percent-BDok8ASz.js", "/assets/truck-Xb_aF5WK.js", "/assets/building-2-DeX9oKq4.js", "/assets/landmark-DzN6FiYC.js", "/assets/settings-fqlLIfNv.js", "/assets/user-CGB-hmy8.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/home": { "id": "routes/home", "parentId": "routes/dashboard-layout", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/home-BSMP2NCl.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/card-BS-gDlr1.js", "/assets/avatar-CUmbcVlF.js", "/assets/utils-ADFk-99P.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/users-C-N4xqcL.js", "/assets/index-DYDK8zmC.js", "/assets/arrow-up-right-Bz9OdXz1.js", "/assets/index-BNsbGyCY.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/company": { "id": "routes/company", "parentId": "routes/dashboard-layout", "path": "company", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/company-CRAbLtXt.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/validators-y24I4gES.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/customers": { "id": "routes/customers", "parentId": "routes/dashboard-layout", "path": "customers", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/customers-eGsX8mkQ.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/dialog-CTjomM_e.js", "/assets/select-C2R-mqUm.js", "/assets/tabs-CQrzeObO.js", "/assets/validators-y24I4gES.js", "/assets/plus-ByAoW2E-.js", "/assets/credit-card-CNkoNYEF.js", "/assets/truck-Xb_aF5WK.js", "/assets/user-CGB-hmy8.js", "/assets/phone-DrgT_Tag.js", "/assets/map-pin-B5HB5Enc.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js", "/assets/index-BLlR36Of.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/index-Cphk0bnP.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/sites": { "id": "routes/sites", "parentId": "routes/dashboard-layout", "path": "sites", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/sites-DKV-MI1e.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/badge-DKAlufUI.js", "/assets/dialog-CTjomM_e.js", "/assets/select-C2R-mqUm.js", "/assets/plus-ByAoW2E-.js", "/assets/building-2-DeX9oKq4.js", "/assets/map-pin-B5HB5Enc.js", "/assets/phone-DrgT_Tag.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js", "/assets/index-BLlR36Of.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/challans": { "id": "routes/challans", "parentId": "routes/dashboard-layout", "path": "challans", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/challans-uO4GkGHI.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/badge-DKAlufUI.js", "/assets/dialog-CTjomM_e.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/plus-ByAoW2E-.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/arrow-up-right-Bz9OdXz1.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js", "/assets/index-BLlR36Of.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/delivery-challans": { "id": "routes/delivery-challans", "parentId": "routes/dashboard-layout", "path": "delivery-challans", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/delivery-challans-C5zRe3bw.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/dialog-CTjomM_e.js", "/assets/separator-CZR4VChq.js", "/assets/format-B1sj8RnW.js", "/assets/search-DzeK6g1i.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/plus-ByAoW2E-.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/eye-CU0GyLtP.js", "/assets/cloud-download-BWyYe3el.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/employees": { "id": "routes/employees", "parentId": "routes/dashboard-layout", "path": "employees", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/employees-CA7AyknS.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/badge-DKAlufUI.js", "/assets/table-Kcehyu6O.js", "/assets/card-BS-gDlr1.js", "/assets/avatar-CUmbcVlF.js", "/assets/dialog-CTjomM_e.js", "/assets/select-C2R-mqUm.js", "/assets/plus-ByAoW2E-.js", "/assets/phone-DrgT_Tag.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BNsbGyCY.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js", "/assets/index-BLlR36Of.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/items": { "id": "routes/items", "parentId": "routes/dashboard-layout", "path": "items", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/items-CB1Li5mw.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/badge-DKAlufUI.js", "/assets/table-Kcehyu6O.js", "/assets/select-C2R-mqUm.js", "/assets/dialog-CTjomM_e.js", "/assets/validators-y24I4gES.js", "/assets/plus-ByAoW2E-.js", "/assets/coerce-BwwzrRqp.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/item-groups": { "id": "routes/item-groups", "parentId": "routes/dashboard-layout", "path": "groups", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/item-groups-CHoh6grh.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/dialog-CTjomM_e.js", "/assets/plus-ByAoW2E-.js", "/assets/layers-b8io3x0R.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/vendors": { "id": "routes/vendors", "parentId": "routes/dashboard-layout", "path": "vendors", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/vendors-8EuTsEpH.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/dialog-CTjomM_e.js", "/assets/select-C2R-mqUm.js", "/assets/validators-y24I4gES.js", "/assets/plus-ByAoW2E-.js", "/assets/credit-card-CNkoNYEF.js", "/assets/truck-Xb_aF5WK.js", "/assets/store-C08lDrWY.js", "/assets/map-pin-B5HB5Enc.js", "/assets/phone-DrgT_Tag.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js", "/assets/index-BLlR36Of.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/warehouses": { "id": "routes/warehouses", "parentId": "routes/dashboard-layout", "path": "warehouses", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/warehouses-ga8qfsoa.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/dialog-CTjomM_e.js", "/assets/plus-ByAoW2E-.js", "/assets/warehouse-4nSR0qd-.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/currencies": { "id": "routes/currencies", "parentId": "routes/dashboard-layout", "path": "currencies", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/currencies-DMFA8bep.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/dialog-CTjomM_e.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/search-DzeK6g1i.js", "/assets/index-Dr7ioe-u.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/chevron-left-DxhwBUA2.js", "/assets/chevron-right-vYvrFJf9.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/inventory-inward": { "id": "routes/inventory-inward", "parentId": "routes/dashboard-layout", "path": "inventory/inward", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/inventory-inward-JZITf845.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/textarea-0RwwFWZP.js", "/assets/search-DzeK6g1i.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/plus-ByAoW2E-.js", "/assets/save--H6FWQCr.js", "/assets/format-B1sj8RnW.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/createLucideIcon-BFeMIM0T.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/inventory-outward": { "id": "routes/inventory-outward", "parentId": "routes/dashboard-layout", "path": "inventory/outward", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/inventory-outward-DhjBtsZa.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/textarea-0RwwFWZP.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/search-DzeK6g1i.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/plus-ByAoW2E-.js", "/assets/save--H6FWQCr.js", "/assets/format-B1sj8RnW.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/inventory": { "id": "routes/inventory", "parentId": "routes/dashboard-layout", "path": "inventory", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/inventory-C7mZILor.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/utils-ADFk-99P.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/textarea-0RwwFWZP.js", "/assets/tabs-CQrzeObO.js", "/assets/dialog-CTjomM_e.js", "/assets/separator-CZR4VChq.js", "/assets/search-DzeK6g1i.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/plus-ByAoW2E-.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/eye-CU0GyLtP.js", "/assets/cloud-download-BWyYe3el.js", "/assets/chevron-left-DxhwBUA2.js", "/assets/chevron-right-vYvrFJf9.js", "/assets/format-B1sj8RnW.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Cphk0bnP.js", "/assets/index-CKKpdqlq.js", "/assets/index-Dr7ioe-u.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/fiscal-years": { "id": "routes/fiscal-years", "parentId": "routes/dashboard-layout", "path": "fiscal-years", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/fiscal-years-Bzoqq3TO.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/card-BS-gDlr1.js", "/assets/dialog-CTjomM_e.js", "/assets/table-Kcehyu6O.js", "/assets/format-B1sj8RnW.js", "/assets/utils-ADFk-99P.js", "/assets/chevron-right-vYvrFJf9.js", "/assets/chevron-left-DxhwBUA2.js", "/assets/index-BmXobAf4.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-CKKpdqlq.js", "/assets/index-DYDK8zmC.js", "/assets/plus-ByAoW2E-.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/circle-check-Cgt1GJCF.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BNsbGyCY.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/tax-codes": { "id": "routes/tax-codes", "parentId": "routes/dashboard-layout", "path": "tax-codes", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/tax-codes-2Scwrseo.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/dialog-CTjomM_e.js", "/assets/plus-ByAoW2E-.js", "/assets/percent-BDok8ASz.js", "/assets/coerce-BwwzrRqp.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/sales": { "id": "routes/sales", "parentId": "routes/dashboard-layout", "path": "sales", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/sales-a3vJiF5r.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/tabs-CQrzeObO.js", "/assets/utils-ADFk-99P.js", "/assets/dialog-CTjomM_e.js", "/assets/search-DzeK6g1i.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/plus-ByAoW2E-.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/eye-CU0GyLtP.js", "/assets/cloud-download-BWyYe3el.js", "/assets/chevron-left-DxhwBUA2.js", "/assets/chevron-right-vYvrFJf9.js", "/assets/coerce-BwwzrRqp.js", "/assets/format-B1sj8RnW.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Cphk0bnP.js", "/assets/index-CKKpdqlq.js", "/assets/index-Dr7ioe-u.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/users": { "id": "routes/users", "parentId": "routes/dashboard-layout", "path": "users", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/users-Dm7-BWqa.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/utils-ADFk-99P.js", "/assets/dialog-CTjomM_e.js", "/assets/select-C2R-mqUm.js", "/assets/avatar-CUmbcVlF.js", "/assets/search-DzeK6g1i.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/chevron-left-DxhwBUA2.js", "/assets/chevron-right-vYvrFJf9.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js", "/assets/index-BLlR36Of.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/profile": { "id": "routes/profile", "parentId": "routes/dashboard-layout", "path": "profile", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/profile-FqfZ4LYF.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/tabs-CQrzeObO.js", "/assets/save--H6FWQCr.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-Cphk0bnP.js", "/assets/index-BLlR36Of.js", "/assets/index-CKKpdqlq.js", "/assets/createLucideIcon-BFeMIM0T.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/settings": { "id": "routes/settings", "parentId": "routes/dashboard-layout", "path": "settings", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/settings-oDQQ-j0Z.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/textarea-0RwwFWZP.js", "/assets/settings-fqlLIfNv.js", "/assets/save--H6FWQCr.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/states": { "id": "routes/states", "parentId": "routes/dashboard-layout", "path": "states", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/states-Eryb-2Bu.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/dialog-CTjomM_e.js", "/assets/table-Kcehyu6O.js", "/assets/loader-circle-CoJBDx0o.js", "/assets/cloud-download-BWyYe3el.js", "/assets/plus-ByAoW2E-.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/rental-grn": { "id": "routes/rental-grn", "parentId": "routes/dashboard-layout", "path": "rental-grn", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/rental-grn-oB3hpwWh.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/textarea-0RwwFWZP.js", "/assets/dialog-CTjomM_e.js", "/assets/search-DzeK6g1i.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/plus-ByAoW2E-.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/eye-CU0GyLtP.js", "/assets/cloud-download-BWyYe3el.js", "/assets/format-B1sj8RnW.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/missing-entries": { "id": "routes/missing-entries", "parentId": "routes/dashboard-layout", "path": "missing-entries", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/missing-entries-BwKgjbWD.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/textarea-0RwwFWZP.js", "/assets/dialog-CTjomM_e.js", "/assets/separator-CZR4VChq.js", "/assets/search-DzeK6g1i.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/plus-ByAoW2E-.js", "/assets/triangle-alert-DT4_rIZb.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/eye-CU0GyLtP.js", "/assets/cloud-download-BWyYe3el.js", "/assets/format-B1sj8RnW.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/index-Dr7ioe-u.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/adjustments": { "id": "routes/adjustments", "parentId": "routes/dashboard-layout", "path": "adjustments", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/adjustments-cA3fZi5A.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/dialog-CTjomM_e.js", "/assets/separator-CZR4VChq.js", "/assets/search-DzeK6g1i.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/plus-ByAoW2E-.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/eye-CU0GyLtP.js", "/assets/cloud-download-BWyYe3el.js", "/assets/format-B1sj8RnW.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/index-Dr7ioe-u.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/sales-invoice": { "id": "routes/sales-invoice", "parentId": "routes/dashboard-layout", "path": "sales-invoice", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/sales-invoice-IPZTnYl8.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/dialog-CTjomM_e.js", "/assets/separator-CZR4VChq.js", "/assets/index-C_v8z1YV.js", "/assets/loader-circle-CoJBDx0o.js", "/assets/search-DzeK6g1i.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/plus-ByAoW2E-.js", "/assets/eye-CU0GyLtP.js", "/assets/cloud-download-BWyYe3el.js", "/assets/coerce-BwwzrRqp.js", "/assets/format-B1sj8RnW.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/sale-return": { "id": "routes/sale-return", "parentId": "routes/dashboard-layout", "path": "sale-return", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/sale-return-DNyai27X.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/dialog-CTjomM_e.js", "/assets/separator-CZR4VChq.js", "/assets/textarea-0RwwFWZP.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/plus-ByAoW2E-.js", "/assets/eye-CU0GyLtP.js", "/assets/cloud-download-BWyYe3el.js", "/assets/coerce-BwwzrRqp.js", "/assets/format-B1sj8RnW.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/suppliers": { "id": "routes/suppliers", "parentId": "routes/dashboard-layout", "path": "suppliers", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/suppliers-DSaS66sN.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/dialog-CTjomM_e.js", "/assets/select-C2R-mqUm.js", "/assets/tabs-CQrzeObO.js", "/assets/textarea-0RwwFWZP.js", "/assets/validators-y24I4gES.js", "/assets/plus-ByAoW2E-.js", "/assets/user-CGB-hmy8.js", "/assets/phone-DrgT_Tag.js", "/assets/landmark-DzN6FiYC.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-C_v8z1YV.js", "/assets/index-CKKpdqlq.js", "/assets/index-BLlR36Of.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/index-Cphk0bnP.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/purchase-order": { "id": "routes/purchase-order", "parentId": "routes/dashboard-layout", "path": "purchase-order", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/purchase-order-D3UKcehy.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/utils-ADFk-99P.js", "/assets/input-BAMSh1Fm.js", "/assets/card-BS-gDlr1.js", "/assets/select-C2R-mqUm.js", "/assets/table-Kcehyu6O.js", "/assets/dialog-CTjomM_e.js", "/assets/separator-CZR4VChq.js", "/assets/search-DzeK6g1i.js", "/assets/refresh-ccw-DzfCdKI9.js", "/assets/plus-ByAoW2E-.js", "/assets/trash-2-BqwJz1Tw.js", "/assets/eye-CU0GyLtP.js", "/assets/cloud-download-BWyYe3el.js", "/assets/chevron-left-DxhwBUA2.js", "/assets/chevron-right-vYvrFJf9.js", "/assets/coerce-BwwzrRqp.js", "/assets/format-B1sj8RnW.js", "/assets/index-DYDK8zmC.js", "/assets/index-BmXobAf4.js", "/assets/index-BNsbGyCY.js", "/assets/index-BLlR36Of.js", "/assets/index-C_v8z1YV.js", "/assets/index-ByTwjtir.js", "/assets/index-D4OBb5rp.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/index-Dr7ioe-u.js", "/assets/index-CKKpdqlq.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/auth-layout": { "id": "routes/auth-layout", "parentId": "root", "path": void 0, "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/auth-layout-D3Tmejs5.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/login": { "id": "routes/login", "parentId": "routes/auth-layout", "path": "login", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/login-yQQRlNX1.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/loader-circle-CoJBDx0o.js", "/assets/chevron-right-vYvrFJf9.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 }, "routes/register": { "id": "routes/register", "parentId": "routes/auth-layout", "path": "register", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasClientMiddleware": false, "hasErrorBoundary": false, "module": "/assets/register-Chj7bhci.js", "imports": ["/assets/chunk-EPOLDU6W-DKDCgQCl.js", "/assets/label-DTnt8HvX.js", "/assets/schemas-B_z-ryl2.js", "/assets/button-Dw_h9cpJ.js", "/assets/input-BAMSh1Fm.js", "/assets/circle-check-Cgt1GJCF.js", "/assets/createLucideIcon-BFeMIM0T.js", "/assets/loader-circle-CoJBDx0o.js", "/assets/utils-ADFk-99P.js", "/assets/index-DYDK8zmC.js"], "css": [], "clientActionModule": void 0, "clientLoaderModule": void 0, "clientMiddlewareModule": void 0, "hydrateFallbackModule": void 0 } }, "url": "/assets/manifest-7ffa73fd.js", "version": "7ffa73fd", "sri": void 0 };
 const assetsBuildDirectory = "build\\client";
 const basename = "/";
 const future = { "unstable_optimizeDeps": false, "unstable_subResourceIntegrity": false, "unstable_trailingSlashAwareDataRequests": false, "v8_middleware": false, "v8_splitRouteModules": false, "v8_viteEnvironmentApi": false };
@@ -10635,13 +13105,45 @@ const routes = {
     caseSensitive: void 0,
     module: route26
   },
+  "routes/sales-invoice": {
+    id: "routes/sales-invoice",
+    parentId: "routes/dashboard-layout",
+    path: "sales-invoice",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route27
+  },
+  "routes/sale-return": {
+    id: "routes/sale-return",
+    parentId: "routes/dashboard-layout",
+    path: "sale-return",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route28
+  },
+  "routes/suppliers": {
+    id: "routes/suppliers",
+    parentId: "routes/dashboard-layout",
+    path: "suppliers",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route29
+  },
+  "routes/purchase-order": {
+    id: "routes/purchase-order",
+    parentId: "routes/dashboard-layout",
+    path: "purchase-order",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route30
+  },
   "routes/auth-layout": {
     id: "routes/auth-layout",
     parentId: "root",
     path: void 0,
     index: void 0,
     caseSensitive: void 0,
-    module: route27
+    module: route31
   },
   "routes/login": {
     id: "routes/login",
@@ -10649,7 +13151,7 @@ const routes = {
     path: "login",
     index: void 0,
     caseSensitive: void 0,
-    module: route28
+    module: route32
   },
   "routes/register": {
     id: "routes/register",
@@ -10657,7 +13159,7 @@ const routes = {
     path: "register",
     index: void 0,
     caseSensitive: void 0,
-    module: route29
+    module: route33
   }
 };
 const allowedActionOrigins = false;

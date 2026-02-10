@@ -1,0 +1,1 @@
+import{a as e}from"./chunk-EPOLDU6W-DKDCgQCl.js";function s(t){const u=e.useRef(t);return e.useEffect(()=>{u.current=t}),e.useMemo(()=>(...a)=>u.current?.(...a),[])}var f=globalThis?.document?e.useLayoutEffect:()=>{};export{s as a,f as u};

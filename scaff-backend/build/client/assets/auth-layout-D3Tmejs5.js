@@ -1,0 +1,1 @@
+import{w as s,p as t,O as a}from"./chunk-EPOLDU6W-DKDCgQCl.js";const e=s(function(){return t.jsx("div",{className:"min-h-svh w-full bg-white dark:bg-slate-950 font-sans antialiased",children:t.jsx(a,{})})});export{e as default};
