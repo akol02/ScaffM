@@ -2849,13 +2849,13 @@ const challans = UNSAFE_withComponentProps(function Challans() {
       const headers = {
         "Authorization": `Bearer ${token}`
       };
-      const [custRes, siteRes, itemRes, challanRes] = await Promise.all([fetch("http://localhost:5000/api/masters/customers", {
+      const [custRes, siteRes, itemRes, challanRes] = await Promise.all([fetch("/api/masters/customers", {
         headers
-      }), fetch("http://localhost:5000/api/sites", {
+      }), fetch("/api/sites", {
         headers
-      }), fetch("http://localhost:5000/api/masters/items", {
+      }), fetch("/api/masters/items", {
         headers
-      }), fetch("http://localhost:5000/api/challans", {
+      }), fetch("/api/challans", {
         headers
       })]);
       if (custRes.ok) setCustomers(await custRes.json());
@@ -2932,7 +2932,7 @@ const challans = UNSAFE_withComponentProps(function Challans() {
       }))
     };
     const token = localStorage.getItem("token");
-    const url = editingId ? `http://localhost:5000/api/challans/${editingId}` : "http://localhost:5000/api/challans";
+    const url = editingId ? `/api/challans/${editingId}` : "/api/challans";
     const method = editingId ? "PUT" : "POST";
     try {
       const res = await fetch(url, {
@@ -2948,7 +2948,7 @@ const challans = UNSAFE_withComponentProps(function Challans() {
         setIsOpen(false);
         reset();
         setCart([]);
-        const updatedList = await fetch("http://localhost:5000/api/challans", {
+        const updatedList = await fetch("/api/challans", {
           headers: {
             "Authorization": `Bearer ${token}`
           }
