@@ -1,1 +1,0 @@
-import{c as n}from"./createLucideIcon-LR3f_QN8.js";import{a as o}from"./chunk-EPOLDU6W-ChqI0nxY.js";const t=[["path",{d:"m6 9 6 6 6-6",key:"qrunsl"}]],s=n("chevron-down",t);function i(r){const e=o.useRef({value:r,previous:r});return o.useMemo(()=>(e.current.value!==r&&(e.current.previous=e.current.value,e.current.value=r),e.current.previous),[r])}export{s as C,i as u};

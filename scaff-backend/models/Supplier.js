@@ -7,10 +7,13 @@ const supplierSchema = new mongoose.Schema({
     mob1: { type: String, required: true },
     mob2: { type: String },
     email: { type: String },
+    
+    // ✅ Updated Address Fields
     billingAddress: { type: String },
     billingState: { type: String },
-    shippingAddress: { type: String },
-    shippingState: { type: String },
+    shippingAddress: { type: String }, // NEW
+    shippingState: { type: String },   // NEW
+    
     gstn: { type: String },
     pan: { type: String },
     currency: { type: mongoose.Schema.Types.ObjectId, ref: 'Currency' },

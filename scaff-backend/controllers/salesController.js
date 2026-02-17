@@ -171,3 +171,25 @@ exports.getSaleReturns = async (req, res) => {
         res.json(data);
     } catch (err) { res.status(500).json({ message: err.message }); }
 };
+
+// 4. Update Sale Return
+exports.updateSaleReturn = async (req, res) => {
+    try {
+        const { items, ...headerData } = req.body;
+        
+        // Find and Update
+        const updatedReturn = await SaleReturn.findByIdAndUpdate(
+            req.params.id,
+            { ...headerData, items },
+            { new: true }
+        );
+
+        if (!updatedReturn) {
+            return res.status(404).json({ message: "Sale Return not found" });
+        }
+
+        res.json(updatedReturn);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+};

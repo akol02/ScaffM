@@ -11,7 +11,8 @@ const {
     getInvoiceDetails,
     createSaleReturn, 
     getSaleReturns, 
-    getInvoicesByCustomer
+    getInvoicesByCustomer,
+    updateSaleReturn
 } = require('../controllers/salesController');
 
 router.use(protect);
@@ -35,6 +36,9 @@ router.get('/pending-dcs', getPendingDCs);
 
 // --- SALE RETURN ---
 router.route('/returns').get(protect, getSaleReturns).post(protect, createSaleReturn);
+router.route('/returns/:id')
+    .put(updateSaleReturn);
+    
 router.get('/customer-invoices', protect, getInvoicesByCustomer); // Helper
 
 module.exports = router;

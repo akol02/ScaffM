@@ -215,18 +215,19 @@ exports.getSiteInventory = async (req, res) => {
     try {
         const { siteId } = req.query;
 
-        // A. Fetch Deliveries (In)
-        const deliveries = await DeliveryChallan.find({ site: siteId }).populate('items.item', 'name code monthlyRentRate replacementValue'); // Fetch replacement val for missing
+        // 1. Fetch Deliveries (In) - Populating replacementValue
+        const deliveries = await DeliveryChallan.find({ site: siteId })
+            .populate('items.item', 'name code replacementValue unit');
         
-        // B. Fetch Returns (Out)
+        // 2. Fetch Returns (Out)
         const returns = await GoodsReceivedNote.find({ site: siteId });
 
-        // C. Fetch Missing (Lost)
+        // 3. Fetch Previously reported Missing (Lost)
         const missing = await MissingMaterial.find({ site: siteId });
 
         const itemMap = {};
 
-        // 1. Add Delivered
+        // Aggregate Deliveries
         deliveries.forEach(dc => {
             dc.items.forEach(i => {
                 const itemId = i.item._id.toString();
@@ -236,7 +237,8 @@ exports.getSiteInventory = async (req, res) => {
                         itemCode: i.item.code,
                         itemName: i.item.name,
                         unit: i.unit,
-                        rate: i.item.replacementValue || 0, // Default to Replacement Value for Missing
+                        // ✅ Pass Replacement Value as the default rate
+                        rate: i.item.replacementValue || 0, 
                         totalDelivered: 0,
                         totalReturned: 0,
                         totalMissing: 0
@@ -246,7 +248,7 @@ exports.getSiteInventory = async (req, res) => {
             });
         });
 
-        // 2. Subtract Returned
+        // Subtract Returns
         returns.forEach(grn => {
             grn.items.forEach(i => {
                 const itemId = i.item.toString();
@@ -254,7 +256,7 @@ exports.getSiteInventory = async (req, res) => {
             });
         });
 
-        // 3. Subtract Missing
+        // Subtract previous Missing reports
         missing.forEach(mm => {
             mm.items.forEach(i => {
                 const itemId = i.item.toString();
@@ -262,13 +264,13 @@ exports.getSiteInventory = async (req, res) => {
             });
         });
 
-        // D. Calculate Balance
+        // Calculate final balance
         const siteStock = Object.values(itemMap)
             .map(i => ({
                 ...i,
                 balanceQty: i.totalDelivered - i.totalReturned - i.totalMissing
             }))
-            .filter(i => i.balanceQty > 0); // Only show what is physically supposed to be there
+            .filter(i => i.balanceQty > 0);
 
         res.json(siteStock);
     } catch (err) { res.status(500).json({ message: err.message }); }
@@ -284,6 +286,8 @@ exports.createGRN = async (req, res) => {
             docNo, date: new Date(), customer, site, warehouse,
             vehicleNo, driverName, remark, items
         });
+
+       
 
         res.status(201).json(grn);
     } catch (err) { res.status(400).json({ message: err.message }); }
